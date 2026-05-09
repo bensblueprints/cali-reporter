@@ -19,8 +19,8 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
 
-      # HTTP -> HTTPS redirect
-      - "traefik.http.routers.cali-http.rule=Host(`calireporter.com`) || Host(`www.calireporter.com`)"
+      # HTTP -> HTTPS redirect (apex + www + temporary subdomain)
+      - "traefik.http.routers.cali-http.rule=Host(`calireporter.com`) || Host(`www.calireporter.com`) || Host(`cali.advancedmarketing.co`)"
       - "traefik.http.routers.cali-http.entrypoints=http"
       - "traefik.http.routers.cali-http.middlewares=cali-https-redirect"
       - "traefik.http.middlewares.cali-https-redirect.redirectscheme.scheme=https"
@@ -36,8 +36,8 @@ services:
       - "traefik.http.middlewares.cali-www-redirect.redirectregex.replacement=https://calireporter.com/$${1}"
       - "traefik.http.middlewares.cali-www-redirect.redirectregex.permanent=true"
 
-      # Apex (the real one)
-      - "traefik.http.routers.cali.rule=Host(`calireporter.com`)"
+      # Apex + temporary advancedmarketing.co subdomain (until calireporter.com DNS is added)
+      - "traefik.http.routers.cali.rule=Host(`calireporter.com`) || Host(`cali.advancedmarketing.co`)"
       - "traefik.http.routers.cali.entrypoints=https"
       - "traefik.http.routers.cali.tls=true"
       - "traefik.http.routers.cali.tls.certresolver=letsencrypt"
