@@ -9,6 +9,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: "3000"
+      HOSTNAME: "0.0.0.0"
     volumes:
       - cali-data:/app/data
       - cali-uploads:/app/public/uploads
