@@ -1,0 +1,85 @@
+{
+  "themes": [
+    {
+      "key": "iran-war",
+      "category": "national",
+      "target": 75,
+      "queries": [
+        "Iran AND (war OR strike OR attack)",
+        "Israel AND Iran",
+        "(Tehran OR IRGC OR \"Revolutionary Guard\")",
+        "\"Iran nuclear\"",
+        "Houthi AND (strike OR attack OR red sea)"
+      ],
+      "gdeltQueries": [
+        "(Iran war) OR (Iran strike) OR (Iran attack)",
+        "Israel AND Iran",
+        "Tehran OR IRGC",
+        "\"Iran nuclear\"",
+        "Houthi"
+      ]
+    },
+    {
+      "key": "newsom-california-politics",
+      "category": "california",
+      "target": 75,
+      "queries": [
+        "Newsom",
+        "\"Gavin Newsom\"",
+        "California AND (governor OR legislature OR Sacramento)",
+        "\"California ballot\"",
+        "California AND (bill OR law OR signed)"
+      ],
+      "gdeltQueries": [
+        "Newsom",
+        "\"Gavin Newsom\"",
+        "California governor",
+        "California legislature",
+        "California Sacramento"
+      ]
+    },
+    {
+      "key": "california-fires",
+      "category": "california",
+      "target": 75,
+      "queries": [
+        "California AND (wildfire OR fire)",
+        "\"Cal Fire\"",
+        "(Los Angeles OR \"Palisades\" OR \"Eaton\") AND fire",
+        "California AND evacuation",
+        "California AND fire AND (cause OR investigation OR origin)"
+      ],
+      "gdeltQueries": [
+        "California wildfire",
+        "Cal Fire",
+        "Los Angeles fire",
+        "California evacuation",
+        "California fire investigation"
+      ]
+    },
+    {
+      "key": "ai-datacenter",
+      "category": "business",
+      "target": 75,
+      "queries": [
+        "\"data center\" AND (AI OR \"artificial intelligence\")",
+        "(Nvidia OR OpenAI OR Anthropic) AND (datacenter OR \"data center\" OR infrastructure)",
+        "\"data center\" AND (energy OR power OR grid)",
+        "California AND \"data center\"",
+        "(Stargate OR \"Project Stargate\" OR hyperscaler)"
+      ],
+      "gdeltQueries": [
+        "AI data center",
+        "Nvidia data center",
+        "OpenAI infrastructure",
+        "data center energy",
+        "California data center"
+      ]
+    }
+  ],
+  "notes": [
+    "NewsAPI.org free tier covers up to ~30 days back. We split: NewsAPI for days 0-30, GDELT for days 31-90.",
+    "GDELT 'queries' use simpler operators because GDELT's query language is less expressive than NewsAPI's.",
+    "Edit weights/queries here and re-run scripts/backfill.js — no redeploy needed."
+  ]
+}
