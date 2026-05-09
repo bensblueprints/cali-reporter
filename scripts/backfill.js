@@ -21,7 +21,8 @@ import slugify from 'slugify';
 import Database from 'better-sqlite3';
 
 import { searchNewsApi } from '../lib/sources/newsapi.js';
-import { searchGdelt, enrichWithMetaSummary } from '../lib/sources/gdelt.js';
+import { searchGdelt } from '../lib/sources/gdelt.js';
+import { scrapeArticle } from '../lib/sources/scrape.js';
 import { rewriteArticle, generateHeroImage, ACTIVE_TEXT_PROVIDER, ACTIVE_IMAGE_PROVIDER } from '../lib/ai/index.js';
 import { imageNone } from '../lib/ai/none.js';
 import { activeVoice } from '../lib/ai/voices.js';
@@ -177,11 +178,6 @@ async function gather(theme) {
 
 async function processOne(article) {
   const theme = article._theme;
-  let summary = article.summary;
-  if (article._gdelt && summary && summary.length < 80) {
-    const enriched = await enrichWithMetaSummary(article).catch(() => article);
-    summary = enriched.summary || summary;
-  }
 
   const slugBase = makeSlug(article.title);
   const slug = alreadyHaveSlug(slugBase) ? makeSlug(article.title, Date.now().toString(36)) : slugBase;
@@ -189,8 +185,29 @@ async function processOne(article) {
   console.log(`  · [${theme.key}] ${article.title.slice(0, 70)}`);
 
   if (DRY) {
-    console.log(`    [dry] would rewrite + ${NO_IMAGES ? 'skip image' : 'image'} + insert (date=${article.publishedAt})`);
+    console.log(`    [dry] would scrape + rewrite + ${NO_IMAGES ? 'skip image' : 'image'} + insert (date=${article.publishedAt})`);
     stats.inserted++;
+    return;
+  }
+
+  // Scrape the full article body. Fall back to API summary if scrape fails (paywall/403/etc).
+  let body = article.summary || '';
+  let scrapedOgImage = null;
+  try {
+    const scraped = await scrapeArticle(article.url);
+    if (scraped && scraped.text.length >= 600) {
+      body = scraped.text;
+      scrapedOgImage = scraped.ogImage;
+      console.log(`    📰 scraped ${body.length} chars`);
+    } else {
+      console.log(`    📰 scrape failed/thin — using API summary (${body.length} chars)`);
+    }
+  } catch (err) {
+    console.log(`    📰 scrape error: ${err.message} — using API summary`);
+  }
+  if (body.length < 200) {
+    console.log(`    ✗ skipping — neither scrape nor summary yielded usable text`);
+    stats.skipped++;
     return;
   }
 
@@ -198,7 +215,7 @@ async function processOne(article) {
   try {
     rewritten = await rewriteArticle({
       title: article.title,
-      summary,
+      summary: body,           // full scraped body, not just API summary
       sourceName: article.source,
       sourceUrl: article.url,
       category: theme.category,
@@ -209,8 +226,11 @@ async function processOne(article) {
     return;
   }
 
+  // Prefer the source's og:image if we scraped it — much more on-topic than Unsplash stock.
   let hero;
-  if (NO_IMAGES) {
+  if (scrapedOgImage && NO_IMAGES) {
+    hero = { url: scrapedOgImage, alt: article.title };
+  } else if (NO_IMAGES) {
     hero = imageNone({ title: article.title, category: theme.category });
   } else {
     try {
