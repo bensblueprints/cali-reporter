@@ -69,20 +69,32 @@ const GDELT_TO = day(31);
 // --- helpers ---
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-// Relevance filter — keep articles whose TITLE contains at least one of these
-// theme-specific terms. Prevents GDELT/NewsAPI from tagging unrelated articles
-// just because a stray keyword matched in body text.
+// Title-only relevance filter — strict per theme. Prevents stray-keyword matches
+// from body text from misfiling articles into the wrong section.
+// Each theme has a REQUIRED regex; the article's TITLE must match at least once.
 const RELEVANCE = {
-  'iran-war':                    /\b(iran|tehran|irgc|houthi|israel(i)?|netanyahu|hamas|hezbollah|nuclear|sanctions|middle east|persian gulf)\b/i,
-  'newsom-california-politics':  /\b(newsom|california|sacramento|legislature|state senate|state assembly|gavin|governor|cal\b|prop\.? \d|ballot)\b/i,
-  'california-fires':            /\b(wildfire|cal fire|evacuat|palisades|eaton|los angeles|santa ana|red flag|burn(ed|ing)?|blaze|fire(s|fighters?)?)\b/i,
-  'ai-datacenter':               /\b(data ?cent(er|re)|nvidia|openai|anthropic|hyperscaler|stargate|gpu|ai chip|h100|a100|cloud computing|grid|hyperscale|compute)\b/i,
+  // Iran war / Israel / Middle East strikes
+  'iran-war':
+    /\b(iran(ian)?|tehran|irgc|houthi|israel(i)?|netanyahu|hamas|hezbollah|gaza|west bank|strait of hormuz|persian gulf|middle east|nuclear deal|jcpoa)\b/i,
+
+  // Newsom + CA state-level politics — require an explicit political signal in the title
+  'newsom-california-politics':
+    /\b(newsom|gavin|california governor|california legislature|sacramento|state senate|state assembly|california bill|california law|california ballot|prop\.? ?\d+|california attorney general|kamala|ca democrat|ca republican)\b/i,
+
+  // Wildfires — require strong fire-domain words (not generic "fire" or "LA")
+  'california-fires':
+    /\b(wildfire|wild fire|cal\s?fire|firefighter|fire crew|fire chief|fire season|fire perimeter|fire investigation|burn(ed|ing|out) (zone|area|scar|control)|brush fire|forest fire|palisades fire|eaton fire|santa ana wind|red flag warning|evacuat(e|ed|ion|ions)|blaze|firestorm)\b/i,
+
+  // AI datacenters — require AI/datacenter-specific phrasing, not generic "compute" or "grid"
+  'ai-datacenter':
+    /\b(data\s?center|hyperscaler|hyperscale|stargate|nvidia|openai|anthropic|h100|a100|gpu (cluster|farm|build)|ai (chip|infrastructure|build-?out|capacity|training)|server farm|colocation|colo facility)\b/i,
 };
 
 function isRelevant(article, themeKey) {
   const re = RELEVANCE[themeKey];
   if (!re) return true;
-  return re.test(article.title) || re.test(article.summary || '');
+  // TITLE-ONLY match. Stricter but cuts noise.
+  return re.test(article.title);
 }
 
 function makeSlug(title, suffix) {
