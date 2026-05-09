@@ -1,0 +1,52 @@
+services:
+  cali-reporter:
+    build: .
+    image: cali-reporter:latest
+    container_name: cali-reporter
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+    volumes:
+      - cali-data:/app/data
+      - cali-uploads:/app/public/uploads
+    networks:
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+
+      # HTTP -> HTTPS redirect
+      - "traefik.http.routers.cali-http.rule=Host(`calireporter.com`) || Host(`www.calireporter.com`)"
+      - "traefik.http.routers.cali-http.entrypoints=http"
+      - "traefik.http.routers.cali-http.middlewares=cali-https-redirect"
+      - "traefik.http.middlewares.cali-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.cali-https-redirect.redirectscheme.permanent=true"
+
+      # www -> apex redirect
+      - "traefik.http.routers.cali-www.rule=Host(`www.calireporter.com`)"
+      - "traefik.http.routers.cali-www.entrypoints=https"
+      - "traefik.http.routers.cali-www.tls=true"
+      - "traefik.http.routers.cali-www.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cali-www.middlewares=cali-www-redirect"
+      - "traefik.http.middlewares.cali-www-redirect.redirectregex.regex=^https?://www\\.calireporter\\.com/(.*)"
+      - "traefik.http.middlewares.cali-www-redirect.redirectregex.replacement=https://calireporter.com/$${1}"
+      - "traefik.http.middlewares.cali-www-redirect.redirectregex.permanent=true"
+
+      # Apex (the real one)
+      - "traefik.http.routers.cali.rule=Host(`calireporter.com`)"
+      - "traefik.http.routers.cali.entrypoints=https"
+      - "traefik.http.routers.cali.tls=true"
+      - "traefik.http.routers.cali.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cali.service=cali-svc"
+      - "traefik.http.services.cali-svc.loadbalancer.server.port=3000"
+
+volumes:
+  cali-data:
+  cali-uploads:
+
+networks:
+  coolify:
+    external: true

@@ -1,0 +1,18 @@
+{
+  "feeds": [
+    { "name": "Newsmax — Newsfront",       "url": "https://www.newsmax.com/rss/Newsfront/16",                                  "category": "national",   "weight": 1 },
+    { "name": "Newsmax — Politics",        "url": "https://www.newsmax.com/rss/Politics/1",                                    "category": "national",   "weight": 1 },
+    { "name": "Newsmax — US",              "url": "https://www.newsmax.com/rss/US/22",                                         "category": "national",   "weight": 1 },
+    { "name": "Newsmax — Finance",         "url": "https://www.newsmax.com/rss/FinanceNews/4",                                 "category": "business",   "weight": 1 },
+    { "name": "LA Times — California",     "url": "https://www.latimes.com/california/rss2.0.xml",                             "category": "california", "weight": 1 },
+    { "name": "LA Times — Business",       "url": "https://www.latimes.com/business/rss2.0.xml",                               "category": "business",   "weight": 1 },
+    { "name": "SF Chronicle — Bay Area",   "url": "https://www.sfchronicle.com/rss/feed/Bay-Area-News-3.php",                  "category": "california", "weight": 1 },
+    { "name": "CalMatters",                "url": "https://calmatters.org/feed/",                                              "category": "california", "weight": 1 },
+    { "name": "Sacramento Bee — Politics", "url": "https://www.sacbee.com/news/politics-government/article_rss.xml",           "category": "california", "weight": 1 },
+    { "name": "KTLA — California",         "url": "https://ktla.com/news/california/feed/",                                    "category": "california", "weight": 1 }
+  ],
+  "notes": [
+    "Feeds are pulled in order; duplicates by GUID/URL are skipped.",
+    "Add or remove feeds freely; no redeploy needed — restart the cron or POST /api/admin/aggregate."
+  ]
+}

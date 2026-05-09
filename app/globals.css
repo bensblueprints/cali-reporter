@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: #fbfaf6;
+  color: #111111;
+}
+
+body {
+  font-feature-settings: "ss01", "ss02";
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.prose-magazine p { @apply mb-5 text-[1.0625rem] leading-[1.7] text-ink; }
+.prose-magazine p.source-line { @apply text-sm text-muted italic mt-8 pt-4 border-t border-rule; }
+.prose-magazine a { @apply underline decoration-accent decoration-2 underline-offset-2 hover:text-accent; }
+.prose-magazine h2 { @apply font-display text-2xl mt-10 mb-4; }
+.prose-magazine blockquote { @apply border-l-4 border-accent pl-4 italic text-muted my-6; }
+
+.dropcap::first-letter {
+  @apply font-display text-[4.25rem] leading-[0.85] float-left mr-2 mt-1 text-accent;
+}
+
+.headline-rule {
+  background-image: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 12px);
+}
