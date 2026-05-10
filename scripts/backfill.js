@@ -226,11 +226,8 @@ async function processOne(article) {
     return;
   }
 
-  // Prefer the source's og:image if we scraped it — much more on-topic than Unsplash stock.
   let hero;
-  if (scrapedOgImage && NO_IMAGES) {
-    hero = { url: scrapedOgImage, alt: article.title };
-  } else if (NO_IMAGES) {
+  if (NO_IMAGES) {
     hero = imageNone({ title: article.title, category: theme.category });
   } else {
     try {
@@ -238,7 +235,9 @@ async function processOne(article) {
         title: article.title,
         deck: rewritten.deck,
         category: theme.category,
+        ogImageHint: scrapedOgImage ? deriveImageHint(article.title, scrapedOgImage) : null,
       });
+      console.log(`    🖼  generated hero: ${hero.url}`);
     } catch (err) {
       console.warn(`    ✗ image: ${err.message}`);
       stats.errors++;
@@ -303,6 +302,20 @@ for (const a of interleaved) {
 console.log(`\n[backfill] done — fetched=${stats.fetched} inserted=${stats.inserted} errors=${stats.errors} took=${Math.round((Date.now()-startedAt)/1000)}s`);
 db.close();
 process.exit(stats.errors > 0 && stats.inserted === 0 ? 1 : 0);
+
+// Pull a coarse subject hint from the og:image URL filename (e.g.
+// 'iran-strike-tehran-aerial.jpg' -> 'iran strike tehran aerial'). Cheap
+// way to pass visual context to the image-gen prompt without a separate
+// vision call. Best-effort only.
+function deriveImageHint(title, ogImageUrl) {
+  try {
+    const u = new URL(ogImageUrl);
+    const last = u.pathname.split('/').pop() || '';
+    const base = last.replace(/\.[a-z0-9]{2,5}$/i, '');
+    const tokens = base.split(/[-_]+/).filter(t => t.length > 2 && !/^\d+$/.test(t)).slice(0, 8);
+    return tokens.join(' ') || null;
+  } catch { return null; }
+}
 
 function interleave(arrays) {
   const out = []; let added;
