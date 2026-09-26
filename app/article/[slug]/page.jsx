@@ -1,3 +1,4 @@
+import { newsSchema, articleMetadata, serializeJsonLd } from '../../../lib/news-schema.js';
 import EditorialImage from '../../../components/EditorialImage.jsx';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
@@ -9,18 +10,7 @@ export const dynamic = 'force-dynamic';
 export function generateMetadata({ params }) {
   const post = getPostBySlug(params.slug);
   if (!post) return {};
-  return {
-    title: post.title,
-    description: post.deck || excerpt(post.content_html, 160),
-    alternates: { canonical: `/article/${post.slug}` },
-    openGraph: {
-      title: post.title,
-      description: post.deck || excerpt(post.content_html, 160),
-      images: post.hero_image ? [{ url: post.hero_image }] : [],
-      type: 'article',
-      publishedTime: post.published_at,
-    },
-  };
+  return articleMetadata(post, labelFor(post.category));
 }
 
 export default function ArticlePage({ params }) {
@@ -33,6 +23,7 @@ export default function ArticlePage({ params }) {
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-10">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(newsSchema(post, labelFor(post.category))) }} />
       <div className="text-center mb-8">
         <Link href={`/category/${post.category}`}
               className="text-[11px] uppercase tracking-[0.3em] text-accent">

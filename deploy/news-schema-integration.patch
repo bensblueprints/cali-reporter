@@ -1,0 +1,53 @@
+--- a/app/article/[slug]/page.jsx
++++ b/app/article/[slug]/page.jsx
+@@ -0,0 +1 @@
++import { newsSchema, articleMetadata, serializeJsonLd } from '../../../lib/news-schema.js';
+@@ -18,12 +19 @@
+-  return {
+-    title: post.title,
+-    description: post.deck || excerpt(post.content_html, 160),
+-    alternates: { canonical: `/article/${post.slug}` },
+-    openGraph: {
+-      title: post.title,
+-      description: post.deck || excerpt(post.content_html, 160),
+-      images: post.hero_image ? [{ url: post.hero_image.startsWith('http') ? post.hero_image : SITE + post.hero_image }] : [],
+-      type: 'article',
+-      publishedTime: post.published_at,
+-    },
+-  };
++  return articleMetadata(post, categoryLabel(post.category));
+@@ -59,21 +49 @@
+-  const jsonLd = {
+-    '@context': 'https://schema.org',
+-    '@type': 'NewsArticle',
+-    headline: post.title,
+-    description: post.deck || excerpt(post.content_html, 160),
+-    image: post.hero_image ? [post.hero_image.startsWith('http') ? post.hero_image : SITE + post.hero_image] : undefined,
+-    datePublished: post.published_at,
+-    dateModified: post.updated_at || post.published_at,
+-    author: post.author_name
+-      ? [{ '@type': 'Person', name: post.author_name, url: `${SITE}/authors/${post.author_slug}`, jobTitle: post.author_beat || undefined }]
+-      : [{ '@type': 'Organization', name: 'Cali Reporter' }],
+-    publisher: {
+-      '@type': 'Organization',
+-      name: 'Cali Reporter',
+-      url: SITE,
+-      logo: { '@type': 'ImageObject', url: `${SITE}/logo.png`, width: 600, height: 80 },
+-    },
+-    mainEntityOfPage: { '@type': 'WebPage', '@id': `${SITE}/article/${post.slug}` },
+-    articleSection: categoryLabel(post.category),
+-    isAccessibleForFree: true,
+-  };
++  const jsonLd = newsSchema(post, categoryLabel(post.category));
+@@ -83 +53 @@
+-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
+--- a/app/authors/[slug]/page.jsx
++++ b/app/authors/[slug]/page.jsx
+@@ -0,0 +1 @@
++import { serializeJsonLd } from '../../../lib/news-schema.js';
+@@ -42,0 +44 @@
++    '@id': `${SITE}/authors/${author.slug}#person`,
+@@ -54 +56 @@
+-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
++      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
