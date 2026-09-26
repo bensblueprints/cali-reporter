@@ -47,3 +47,9 @@ test('all archive rows, news shards, exact 48 hours, escaped XML and 30-minute c
   assert.match(sitemapResponse(news).headers.get('cache-control'), /max-age=1800/);
   db.close();
 });
+
+test('editorial desk bylines use Organization identity rather than Person',()=>{
+ const schema=newsSchema({slug:'desk-story',title:'Desk story',content_html:'<p>Story</p>',published_at:'2026-09-27T00:00:00Z',category:'los-angeles',author_name:'Los Angeles Desk',author_slug:'los-angeles-desk',author_role:'desk'});
+ assert.equal(schema.author[0]['@type'],'Organization');
+ assert.match(schema.author[0]['@id'],/#organization$/);
+});
