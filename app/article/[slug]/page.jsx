@@ -1,3 +1,4 @@
+import EditorialImage from '../../../components/EditorialImage.jsx';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getPostBySlug, listPosts } from '../../../lib/db.js';
@@ -52,7 +53,7 @@ export default function ArticlePage({ params }) {
 
       {post.hero_image && (
         <figure className="mb-10">
-          <img src={post.hero_image} alt={post.hero_alt || post.title}
+          <EditorialImage size="hero" priority src={post.hero_image} alt={post.hero_alt || post.title}
                className="w-full aspect-[16/9] object-cover" />
           {post.hero_alt && <figcaption className="text-xs text-muted mt-2 text-center">{post.hero_alt}</figcaption>}
         </figure>

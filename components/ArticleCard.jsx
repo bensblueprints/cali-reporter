@@ -1,3 +1,4 @@
+import EditorialImage from './EditorialImage.jsx';
 import Link from 'next/link';
 import { excerpt, timeAgo } from '../lib/format.js';
 
@@ -14,7 +15,7 @@ function LeadCard({ post }) {
       <Link href={`/article/${post.slug}`} className="md:col-span-7 block group">
         {post.hero_image && (
           <div className="aspect-[16/10] overflow-hidden bg-rule">
-            <img src={post.hero_image} alt={post.hero_alt || post.title}
+            <EditorialImage size="hero" priority src={post.hero_image} alt={post.hero_alt || post.title}
                  className="h-full w-full object-cover transition group-hover:scale-[1.02]" />
           </div>
         )}
@@ -37,7 +38,7 @@ function DefaultCard({ post }) {
       <Link href={`/article/${post.slug}`} className="block group">
         {post.hero_image && (
           <div className="aspect-[16/10] overflow-hidden bg-rule mb-3">
-            <img src={post.hero_image} alt={post.hero_alt || post.title}
+            <EditorialImage src={post.hero_image} alt={post.hero_alt || post.title}
                  className="h-full w-full object-cover transition group-hover:scale-[1.02]" />
           </div>
         )}
@@ -59,7 +60,7 @@ function CompactCard({ post }) {
     <article className="flex gap-3 py-3 border-b border-rule">
       {post.hero_image && (
         <Link href={`/article/${post.slug}`} className="shrink-0 block">
-          <img src={post.hero_image} alt={post.hero_alt || post.title}
+          <EditorialImage size="thumb" src={post.hero_image} alt={post.hero_alt || post.title}
                className="h-20 w-20 object-cover" />
         </Link>
       )}

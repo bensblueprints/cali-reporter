@@ -11,7 +11,9 @@
     "aggregate": "node scripts/aggregate.js",
     "aggregate:dry": "node scripts/aggregate.js --dry",
     "backfill": "node scripts/backfill.js",
-    "backfill:dry": "node scripts/backfill.js --dry"
+    "backfill:dry": "node scripts/backfill.js --dry",
+    "images:optimize": "node scripts/optimize-images.js",
+    "test:images": "node --test tests/images.test.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.1",
@@ -26,6 +28,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "rss-parser": "^3.13.0",
+    "sharp": "0.34.5",
     "slugify": "^1.6.6"
   },
   "devDependencies": {
