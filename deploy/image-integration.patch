@@ -9,10 +9,10 @@
 -  'billboard':   { file: '/ads/hydroxyl-970x250.png', w: 970, h: 250, wrap: '' },
 -  'mid-article': { file: '/ads/hydroxyl-300x250.png', w: 300, h: 250, wrap: '' },
 -  'sidebar':     { file: '/ads/hydroxyl-300x600.png', w: 300, h: 600, wrap: 'hidden lg:block' },
-+  'leaderboard': { file: '/ads/hydroxyl-728x90-de9c934390.webp',  w: 728, h: 90,  wrap: 'hidden md:block' },
-+  'mobile-top':  { file: '/ads/hydroxyl-320x50-00b0ee96fd.webp',  w: 320, h: 50,  wrap: 'md:hidden' },
-+  'billboard':   { file: '/ads/hydroxyl-970x250-b6ca589377.webp', w: 970, h: 250, wrap: '' },
-+  'mid-article': { file: '/ads/hydroxyl-300x250-9696e1e841.webp', w: 300, h: 250, wrap: '' },
++  'leaderboard': { file: '/ads/hydroxyl-728x90-e897f76ece.webp',  w: 728, h: 90,  wrap: 'hidden md:block' },
++  'mobile-top':  { file: '/ads/hydroxyl-320x50-442b7ef709.webp',  w: 320, h: 50,  wrap: 'md:hidden' },
++  'billboard':   { file: '/ads/hydroxyl-970x250-b2f2b9dc65.webp', w: 970, h: 250, wrap: '' },
++  'mid-article': { file: '/ads/hydroxyl-300x250-a749f794fc.webp', w: 300, h: 250, wrap: '' },
 +  'sidebar':     { file: '/ads/hydroxyl-300x600-32876c16e5.webp', w: 300, h: 600, wrap: 'hidden lg:block' },
  };
  
