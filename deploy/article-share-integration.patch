@@ -1,0 +1,26 @@
+--- a/components/Byline.jsx
++++ b/components/Byline.jsx
+@@ -6 +6 @@
+-export default function Byline({ post }) {
++export default function Byline({ post, children }) {
+@@ -9 +9 @@
+-      <div className="flex items-center gap-3 border-y border-rule py-4 my-8">
++      <div className="flex flex-wrap items-center justify-between gap-4 border-y border-rule py-4 my-8">
+@@ -12,0 +13 @@
++        {children}
+@@ -17 +18,2 @@
+-    <div className="flex items-center gap-4 border-y border-rule py-4 my-8">
++    <div className="flex flex-wrap items-center justify-between gap-4 border-y border-rule py-4 my-8">
++      <div className="flex min-w-0 items-center gap-4">
+@@ -34,0 +37,2 @@
++      </div>
++      {children}
+--- a/app/article/[slug]/page.jsx
++++ b/app/article/[slug]/page.jsx
+@@ -7,0 +8 @@
++import ArticleShare from '../../../components/ArticleShare.jsx';
+@@ -67 +68,3 @@
+-          <Byline post={post} />
++          <Byline post={post}>
++            <ArticleShare title={post.title} url={`${SITE}/article/${encodeURIComponent(post.slug)}`} />
++          </Byline>
