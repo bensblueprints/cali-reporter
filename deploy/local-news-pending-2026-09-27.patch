@@ -1,0 +1,58 @@
+--- a/scripts/aggregate.js
++++ b/scripts/aggregate.js
+@@ -14,0 +15 @@
++import { rankLocalItems, discardImportedText } from '../lib/local-news.js';
+@@ -86,3 +87,2 @@
+-function alreadyHaveGuid(guid) {
+-  if (!guid) return false;
+-  return !!db.prepare('SELECT 1 FROM posts WHERE source_guid = ?').get(guid);
++function alreadyHaveGuid(guid, url) {
++  return !!db.prepare('SELECT 1 FROM posts WHERE source_guid = ? OR source_url = ?').get(guid || null, url || null);
+@@ -131,0 +132,8 @@
++  let items = parsed.items || [];
++  if (feed.trends_url) {
++    let signals = [];
++    try { signals = (await parser.parseURL(feed.trends_url)).items || []; }
++    catch (err) { recordLog(`  trend signal unavailable; using recent local coverage: ${err.message}`); }
++    items = rankLocalItems(items, signals);
++    recordLog(`  local candidates=${items.length} trend headlines=${signals.length}`);
++  }
+@@ -133 +141 @@
+-  for (const item of parsed.items || []) {
++  for (const item of items) {
+@@ -142 +150 @@
+-    if (alreadyHaveGuid(guid)) { stats.skipped++; continue; }
++    if (alreadyHaveGuid(guid, link)) { stats.skipped++; continue; }
+@@ -145 +153 @@
+-    recordLog(`  . ${title.slice(0, 80)}`);
++    recordLog(`  . ${title.slice(0, 80)}${feed.trends_url ? ` [coverage matches=${item.localCoverageMatches}]` : ''}`);
+@@ -197,0 +206,4 @@
++    } finally {
++      // Imported source text is transient. Persist only the reviewed rewrite and attribution.
++      body = '';
++      discardImportedText(item);
+--- a/feeds.json
++++ b/feeds.json
+@@ -135 +135,2 @@
+-      "match": "Los Angeles|Sherman Oaks|Hollywood|San Fernando|Van Nuys|LA County"
++      "match": "Los Angeles|Sherman Oaks|Hollywood|San Fernando|Van Nuys|LA County",
++      "trends_url": "https://news.google.com/rss/search?q=%22Los+Angeles%22+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+@@ -142 +143,2 @@
+-      "match": "San Diego"
++      "match": "San Diego",
++      "trends_url": "https://news.google.com/rss/search?q=%22San+Diego%22+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+@@ -149 +151,2 @@
+-      "match": "San Jos[e\u00e9]"
++      "match": "San Jos[e\u00e9]",
++      "trends_url": "https://news.google.com/rss/search?q=%22San+Jose%22+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+@@ -156 +159,2 @@
+-      "match": "San Francisco|\\bS\\.?F\\.?\\b|Telegraph Hill|North Beach|Tenderloin|Golden Gate|Mission District|Castro|Sunset District|Presidio"
++      "match": "San Francisco|\\bS\\.?F\\.?\\b|Telegraph Hill|North Beach|Tenderloin|Golden Gate|Mission District|Castro|Sunset District|Presidio",
++      "trends_url": "https://news.google.com/rss/search?q=%22San+Francisco%22+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+@@ -163 +167,2 @@
+-      "match": "Fresno"
++      "match": "Fresno",
++      "trends_url": "https://news.google.com/rss/search?q=%22Fresno%22+when%3A2d&hl=en-US&gl=US&ceid=US%3Aen"
+@@ -171 +176 @@
+-    "Add or remove feeds freely; no redeploy needed beyond restarting the cron or POST /api/admin/aggregate."
++    "City feeds prioritize current Google News RSS headline coverage, then recency; this is a coverage signal, not an audience-popularity claim. Only local source items from the last 72 hours are eligible. Trend feed outages fall back to newest local reports. Rebuild/recreate the container after changing this baked-in configuration."
