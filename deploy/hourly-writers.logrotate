@@ -1,0 +1,8 @@
+/var/log/cali-reporter-hourly-writers.log {
+    weekly
+    rotate 4
+    compress
+    missingok
+    notifempty
+    copytruncate
+}

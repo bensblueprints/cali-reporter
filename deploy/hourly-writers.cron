@@ -1,0 +1,2 @@
+# One category article per named writer per UTC hour; retry polling every five minutes.
+*/5 * * * * flock -n /run/lock/cali-reporter-aggregate.lock docker exec cali-reporter node /app/scripts/hourly-writers.js --scope=all --max-jobs=12 --budget-seconds=240 --concurrency=2 >> /var/log/cali-reporter-hourly-writers.log 2>&1

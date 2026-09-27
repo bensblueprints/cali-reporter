@@ -67,7 +67,7 @@ test('city writer names persist across reseeding without changing article owners
   for(const [city,name] of Object.entries(CITY_WRITER_NAMES)) {
    const author=sectionWriter(db,city);
    assert.equal(author.id,ids[city]);assert.equal(author.slug,`${city}-desk`);
-   assert.equal(author.name,name);assert.match(author.beat,/AI writer/);
+   assert.equal(author.name,name);assert.ok(!author.beat.includes('AI writer'));
    assert.match(author.bio,/not a human reporter/);
    assert.equal(db.prepare('SELECT COUNT(*) n FROM posts WHERE author_id=?').get(author.id).n,1);
   }

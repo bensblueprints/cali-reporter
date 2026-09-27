@@ -1,6 +1,6 @@
 # Named city writers
 
-City bylines now use distinct AI writer names: Los Angeles/Maya Chen, San Diego/Lucas Bennett, San Jose/Nina Patel, San Francisco/Avery Brooks, Fresno/Elena Cruz. Bylines identify the city and AI writer role; profile biographies disclose that these are editorial identities, not human reporters. Existing organization author schema remains accurate for these editorial identities.
+City bylines now use distinct AI writer names: Los Angeles/Maya Chen, San Diego/Lucas Bennett, San Jose/Nina Patel, San Francisco/Avery Brooks, Fresno/Elena Cruz. Bylines identify the city; profile biographies disclose that these are editorial identities, not human reporters. Existing organization author schema remains accurate for these editorial identities.
 
 Author IDs and existing /authors/{city}-desk URLs stay unchanged, so all already-linked articles pick up the names and old links remain valid. Updated section seeding preserves the names on subsequent importer runs. Health and relationships profiles are unchanged.
 
