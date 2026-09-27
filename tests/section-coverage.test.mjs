@@ -49,3 +49,53 @@ test('model HTML cannot inject scripts, handlers or unapproved links',async()=>{
  const clean=cleanSectionHtml('<p onclick="bad()">Hello<script>alert(1)</script><a href="javascript:bad()">bad link</a><a href="https://source.example/story" onmouseover="bad()">source</a><img src=x onerror="bad()"></p>','https://source.example/story');
  assert.equal(clean,'<p>Hello<a>bad link</a><a href="https://source.example/story" rel="noopener">source</a></p>'.replace('<a>bad link</a>','bad link'));
 });
+
+test('city writer names persist across reseeding without changing article ownership or links',async()=>{
+ const {seedSectionWriters,sectionWriter,CITY_WRITER_NAMES}=await import('../lib/section-coverage.js');
+ const db=new Database(':memory:');
+ try {
+  db.exec(`CREATE TABLE authors (id INTEGER PRIMARY KEY,slug TEXT UNIQUE,name TEXT,role TEXT,desk TEXT,beat TEXT,bio TEXT,voice_prompt TEXT);
+   CREATE TABLE posts (id INTEGER PRIMARY KEY,author_id INTEGER REFERENCES authors(id));`);
+  seedSectionWriters(db);
+  const ids={};
+  for(const [city,name] of Object.entries(CITY_WRITER_NAMES)) {
+   const author=sectionWriter(db,city);ids[city]=author.id;
+   db.prepare('UPDATE authors SET name=? WHERE id=?').run(`${city} Desk`,author.id);
+   db.prepare('INSERT INTO posts (author_id) VALUES (?)').run(author.id);
+  }
+  seedSectionWriters(db);seedSectionWriters(db);
+  for(const [city,name] of Object.entries(CITY_WRITER_NAMES)) {
+   const author=sectionWriter(db,city);
+   assert.equal(author.id,ids[city]);assert.equal(author.slug,`${city}-desk`);
+   assert.equal(author.name,name);assert.match(author.beat,/AI writer/);
+   assert.match(author.bio,/not a human reporter/);
+   assert.equal(db.prepare('SELECT COUNT(*) n FROM posts WHERE author_id=?').get(author.id).n,1);
+  }
+  assert.equal(sectionWriter(db,'health').name,'Health & Nutrition Desk');
+  assert.equal(sectionWriter(db,'relationships').name,'Love & Relationships Desk');
+ } finally {db.close();}
+});
+
+test('city-name migration previews safely, backs up and preserves article data',async()=>{
+ const {seedSectionWriters,sectionWriter}=await import('../lib/section-coverage.js');
+ const {readdirSync}=await import('node:fs');
+ const dir=mkdtempSync(join(tmpdir(),'cali-city-names-'));const database=join(dir,'test.db');
+ try {
+  const db=new Database(database);
+  db.exec(`CREATE TABLE authors (id INTEGER PRIMARY KEY,slug TEXT UNIQUE,name TEXT,role TEXT,desk TEXT,beat TEXT,bio TEXT,voice_prompt TEXT);
+   CREATE TABLE posts (id INTEGER PRIMARY KEY,author_id INTEGER,title TEXT,published_at TEXT);`);
+  seedSectionWriters(db);
+  const author=sectionWriter(db,'los-angeles');
+  db.prepare('UPDATE authors SET name=? WHERE id=?').run('Los Angeles Desk',author.id);
+  db.prepare('INSERT INTO posts VALUES (1,?,?,?)').run(author.id,'Existing story','2026-09-01T00:00:00Z');
+  const before=db.prepare('SELECT * FROM posts').all();
+  const run=(args)=>JSON.parse(execFileSync(process.execPath,['scripts/name-city-writers.js',...args],{cwd:new URL('..',import.meta.url),env:{...process.env,DATABASE_PATH:database}}));
+  assert.equal(run([]).applied,false);
+  assert.equal(sectionWriter(db,'los-angeles').name,'Los Angeles Desk');
+  assert.equal(run(['--apply']).applied,true);
+  assert.equal(sectionWriter(db,'los-angeles').name,'Maya Chen');
+  assert.deepEqual(db.prepare('SELECT * FROM posts').all(),before);
+  assert.equal(readdirSync(join(dir,'author-backups')).length,1);
+  db.close();
+ } finally {rmSync(dir,{recursive:true,force:true});}
+});
