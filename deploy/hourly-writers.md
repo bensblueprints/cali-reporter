@@ -123,3 +123,16 @@ path, rather than only endpoint health. The GPU blocker above is resolved.
 - A bounded live test rejected an invalid draft, then published Los Angeles article ID 3955 under Maya Chen. Its public page, source attribution, NewsArticle author/category fields and HTTP 200 WebP hero were verified.
 - All five city profiles show clean city subtitles and retain profile disclosure.
 - Cron service is active; all 35 current-hour slots were created. Full sustained output of 35 approved articles per hour has not been demonstrated. Feed and model failures are recorded in queue state and logs.
+
+## October 4 coverage/depth release verification
+
+- Before: the last 24 hours contained 16 posts in only five categories, about 112–205 words each. The hourly writer explicitly requested short briefs and capped them at 200 words.
+- Fixed: fair claims across all 13 categories, full RSS intake, interleaved source feeds, six verified feed additions, and a hard 600–2500 visible-word gate.
+- Quality: independent review calls, bounded repair attempts, exact-source quotation checks (25 quoted words maximum), and a deterministic source-overlap check reject more than 25 copied words in passages of eight or more words, even if quotation marks were stripped. These checks reduce errors; they do not establish that every model-approved article is error-free.
+- The alternate Qwen review model was probed but did not pass the full canary reliably; production retains the working section model for separate review calls. `LOCALFLEET_MODEL_REVIEW` can select a separately validated reviewer.
+- Twenty-two tests pass, including category fairness, length boundaries, quote provenance, copied-text detection, HTML safety, review retry handling and process exit.
+- A copy of production data selected 13 distinct categories in its first 13 claims. Live jobs reached previously neglected West Coast and Fresno, then San Jose and Good News.
+- Automatic generation published posts 3974 and 3975. Direct editorial inspection then found close source wording and unsupported details that the model review had missed. Both were corrected in place after an online backup, with visible correction notes; stable IDs, URLs, bylines and images were retained.
+- Final verified bodies: West Coast post 3974, 701 words; Fresno post 3975, 788 words. Both have zero copied words under the eight-word-passage overlap check against the actual source. The corrected content is retained in `deploy/editorial-corrections-2026-10-04.json`; third-party source bodies are not committed.
+- Source rollback files: `/opt/cali-depth-backup-20261004` on the production host. Before-correction SQLite backup: `/app/data/pre-depth-editorial-corrections-20261004.db` in the persistent application volume. Do not restore the entire database over newer publications.
+- Historical short posts remain unchanged. No claim is made that all 13 categories already have a new long article or that 35 successful publications per hour have been demonstrated. Use the read-only coverage audit to measure actual output.

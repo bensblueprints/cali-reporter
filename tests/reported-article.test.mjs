@@ -1,8 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateArticle,validateQuotes,writeReportedArticle,plainText,wordCount} from '../lib/ai/reported-article.js';
+import {validateArticle,validateQuotes,copiedWordCount,writeReportedArticle,plainText,wordCount} from '../lib/ai/reported-article.js';
 const url='https://example.com/story';
 const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1)}</p>`});
+test('copied passages are detected even after quotation marks and punctuation are removed',()=>{
+ const source=Array.from({length:40},(_,i)=>`word${i}`).join(' ');
+ assert.equal(copiedWordCount(`<p>${source.toUpperCase()}.</p>`,source),40);
+ assert.equal(copiedWordCount('<p>Completely different wording describing the same broad topic.</p>',source),0);
+});
 test('brief quotes must match source exactly and stay within the quotation limit',()=>{
  validateQuotes('<p>The program is called “Safer Streets”.</p>','The Safer Streets program opens today.');
  assert.throws(()=>validateQuotes('<p>She said “Invented interview”.</p>','No interview.'),/verbatim/);
