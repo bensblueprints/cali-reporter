@@ -62,7 +62,15 @@ with the driver. ComfyUI repeatedly exits with `No CUDA GPUs are available`.
 The existing SSH account cannot use passwordless sudo. An administrator must
 restore a compatible NVIDIA driver for the running kernel (or deliberately
 boot the known driver-equipped kernel), then verify ComfyUI, the public image
-endpoint, and an actual scheduled article. No GPU/kernel changes were made.
+endpoint, and AI image generation. No GPU/kernel changes were made.
+
+Follow-up verification: a second live two-job run published post 3957 at
+2026-10-03T16:20:32.052Z, then exited with status 0 and released the flock.
+The existing image-provider wrapper fell back to Unsplash after ComfyUI's 502;
+thus the image outage degrades custom images but does not block all publishing.
+The public article and fallback hero returned HTTP 200. The article includes
+DeShawn Carter's byline and NewsArticle metadata. Automatic scheduling remains
+enabled; this proves recovered publication, not sustained 35-article/hour output.
 
 Rollback files and original cron: `/opt/cali-autoblog-backup-20261003`.
 Prior image: `cali-reporter:before-autoblog-fix-20261003`. Preserve unrelated
