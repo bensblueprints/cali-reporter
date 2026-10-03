@@ -8,6 +8,22 @@ function fixture(){const db=new Database(':memory:');db.exec(`CREATE TABLE autho
  CREATE TABLE posts(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,deck TEXT,content_html TEXT,hero_image TEXT,hero_alt TEXT,category TEXT,origin TEXT,source_name TEXT,source_url TEXT,source_guid TEXT UNIQUE,published_at TEXT,author_id INTEGER);`);ensureHourlyJobs(db);return db;}
 const writers=[{id:1,desk:'los-angeles'},{id:2,desk:'san-diego'}];
 const post=(job)=>({slug:'article-'+job.id,title:'Article',deck:null,content_html:'<p>Reviewed article</p>',hero_image:'/uploads/image.webp',hero_alt:'Illustration',category:job.category,source_name:'Publisher',source_url:'https://example.com/'+job.id,source_guid:'source-'+job.id,published_at:new Date(now).toISOString(),author_id:job.author_id});
+test('busy desks cannot consume all claims before later-ID categories get a turn',()=>{
+ const db=fixture();try{
+ db.exec("INSERT INTO authors VALUES (30,'City','city','Fresno','')");
+ enqueueHour(db,[{id:1,desk:'california'},{id:2,desk:'california'},{id:30,desk:'fresno'}],now);
+ const a=claimJob(db,now);assert.equal(a.author_id,1);
+ const b=claimJob(db,now);assert.equal(b.author_id,30);
+ assert.equal(claimJob(db,now).author_id,2);
+ }finally{db.close();}
+});
+test('new hour prioritizes the section with oldest coverage rather than writer IDs',()=>{
+ const db=fixture();try{
+ db.prepare('INSERT INTO posts(category,published_at) VALUES (?,?)').run('los-angeles',new Date(now-60000).toISOString());
+ enqueueHour(db,writers,now);
+ assert.equal(claimJob(db,now).category,'san-diego');
+ }finally{db.close();}
+});
 test('hourly slots are idempotent, scoped, and recover without duplicate publication',()=>{
  const db=fixture();try{
  assert.equal(enqueueHour(db,writers,now),2);assert.equal(enqueueHour(db,writers,now),0);

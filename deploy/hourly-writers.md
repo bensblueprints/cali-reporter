@@ -22,7 +22,15 @@ A failed job retries after five minutes, up to three attempts per hour. Each att
 
 ## Content
 
-Each writer uses sources from their assigned category. All hourly output takes the strict source-linked rewrite path, including factual review and HTML sanitization. It currently produces short sourced news briefs; this schedule does not promise long-form essays or original on-scene reporting.
+Each writer uses sources from their assigned category. As of October 4, all new hourly output uses `lib/ai/reported-article.js`: **600–2500 visible words**, descriptive subheadings, source attribution, sanitized HTML and a separate factual review. Up to three draft attempts allow formatting/length repairs and one factual-review correction; review/provider/length failures never fall back to copied source text or short summaries. Historical short articles are not rewritten automatically.
+
+The intake prioritizes full RSS article bodies over snippets, retaining whichever is longer between RSS and scraped text. At least 700 source words are required. Each job may inspect up to eight sources, but spends model calls on at most two sufficiently substantial candidates. Output typically targets 650–1800 words based on source length; 2500 is a ceiling, not a padding target. Longer articles still depend on actual source material, not invented context.
+
+Claims rotate by category attempt count within the current hour, then oldest publication by category, then writer attempts and last publication. This prevents early writer IDs and large desks from occupying every turn. A production-database clone verified 13 distinct categories in the first 13 claims. It does not establish 35 successful articles per hour or guarantee a publishable story in every category on every run.
+
+`deploy/hourly-feeds.json` records the complete 13-category feed configuration, including tested PsyPost relationship coverage, OPB West Coast coverage, and LA Times/Mission Local city backups and KPBS/Voice of San Diego full-text feeds. Merge additions with live feeds rather than dropping later changes.
+
+Use `node scripts/audit-hourly-coverage.js --since=2026-10-03T18:07:00Z` to report coverage, word counts and queue states by category. It includes zero-publication categories. Earlier reports legitimately include old short briefs; use the deployment timestamp when validating the new length rule.
 
 City articles use Google News RSS headline overlap as a current-coverage signal, followed by recency; this is not audience-popularity measurement. Only eligible local publisher items from the last 72 hours are used for city coverage. Trend-feed failures fall back to recent local reports. Publisher feeds were reachable from production on September 27: KTLA, Times of San Diego, San Jose Spotlight, SF Standard and Fresnoland. Fresh candidate supply was limited in some cities.
 
