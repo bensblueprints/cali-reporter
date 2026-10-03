@@ -1,2 +1,3 @@
-# One category article per named writer per UTC hour; retry polling every five minutes.
-*/5 * * * * flock -n /run/lock/cali-reporter-aggregate.lock docker exec cali-reporter node /app/scripts/hourly-writers.js --scope=all --max-jobs=12 --budget-seconds=240 --concurrency=2 >> /var/log/cali-reporter-hourly-writers.log 2>&1
+# Supersedes aggregate/columns/Reddit publishing entries; preserve other cron jobs.
+# Timeout MUST run inside the container so it kills Node, not just docker's client.
+*/5 * * * * flock -n /run/lock/cali-reporter-aggregate.lock docker exec cali-reporter timeout --signal=TERM --kill-after=30s 20m node /app/scripts/hourly-writers.js --scope=all --max-jobs=12 --budget-seconds=240 --concurrency=2 >> /var/log/cali-reporter-hourly-writers.log 2>&1

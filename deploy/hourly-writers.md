@@ -30,6 +30,45 @@ Source bodies stay transient. The database stores the reviewed article, publishe
 
 ## Monitoring and rollback
 
+### October 3 incident and recovery
+
+The September 27 validation worker completed its two jobs and logged
+`run-complete`, but its Node process stayed alive with a referenced handle.
+The exact library owning that handle was not established. Its host `flock`
+remained held for six days, causing every five-minute cron invocation to skip.
+Last publication before investigation: post 3956, September 27 at 12:48:46 UTC.
+
+The worker now flushes stdout/stderr and explicitly exits only after all jobs
+settle and SQLite closes. `tests/worker-exit.test.mjs` reproduces a lingering
+handle and checks both process exit and complete log output. All 14 targeted
+tests pass. Install the line in `deploy/hourly-writers.cron`, replacing only the
+existing hourly writer line. Its 20-minute timeout runs **inside** the container,
+so it terminates the actual Node process; a host-only docker-client timeout
+would not provide that guarantee. SIGKILL follows TERM after 30 seconds if needed.
+
+Production source and running-container files were updated; the image was
+rebuilt successfully with matching worker/helper SHA256 hashes. Only the
+identified completed September 27 process was terminated. A subsequent live
+two-job run enqueued 35 current-hour slots, rejected both drafts through existing
+review rules, exited with status 0, and released its flock. No new publication
+was verified during that run. Do not equate recovered scheduling with recovered
+end-to-end publishing.
+
+A separate current dependency failure remains: `images.onetimesuite.com`
+returns HTTP 502. Its tunnel targets localhost:8188 on the 5060 Ti image host.
+That host runs kernel `7.0.0-34-generic`, with NVIDIA modules found only for
+`7.0.0-31-generic`; `modinfo nvidia` fails and `nvidia-smi` cannot communicate
+with the driver. ComfyUI repeatedly exits with `No CUDA GPUs are available`.
+The existing SSH account cannot use passwordless sudo. An administrator must
+restore a compatible NVIDIA driver for the running kernel (or deliberately
+boot the known driver-equipped kernel), then verify ComfyUI, the public image
+endpoint, and an actual scheduled article. No GPU/kernel changes were made.
+
+Rollback files and original cron: `/opt/cali-autoblog-backup-20261003`.
+Prior image: `cali-reporter:before-autoblog-fix-20261003`. Preserve unrelated
+cron entries and published data when rolling back. Restoring the prior worker
+without the timeout would reintroduce the lock-retention risk.
+
 - Log: `/var/log/cali-reporter-hourly-writers.log`.
 - SQLite: `hourly_writer_jobs` (author, hour, state, attempts, post, error) and `hourly_source_claims`.
 - Test: `node --test tests/hourly-jobs.test.mjs tests/section-coverage.test.mjs tests/local-news.test.mjs`.

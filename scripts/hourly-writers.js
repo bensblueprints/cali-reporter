@@ -2,6 +2,7 @@
 // Persistent per-writer hourly slots. Cron polls every five minutes; jobs retry safely.
 import 'dotenv/config';
 import fs from 'node:fs';
+import {exitWorker} from '../lib/worker-exit.js';
 import Parser from 'rss-parser';
 import {getDb} from '../lib/db.js';
 import {seedSectionWriters,CITY_WRITER_NAMES,relevantFeedItem} from '../lib/section-coverage.js';
@@ -94,3 +95,4 @@ await Promise.all(Array.from({length:concurrency},async()=>{
 }));
 log('run-complete',{claimed,states:db.prepare('SELECT state,COUNT(*) n FROM hourly_writer_jobs WHERE slot=? GROUP BY state').all(Math.floor(Date.now()/3600000)*3600000)});
 db.close();
+await exitWorker();
