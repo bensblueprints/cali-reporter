@@ -77,6 +77,29 @@ Prior image: `cali-reporter:before-autoblog-fix-20261003`. Preserve unrelated
 cron entries and published data when rolling back. Restoring the prior worker
 without the timeout would reintroduce the lock-retention risk.
 
+### GPU repair, October 3 at 16:55 UTC
+
+Administrator access was provided and the driver dependency was repaired on
+`5060ti-images`. The initial matching-version DKMS module built successfully,
+but Secure Boot rejected its signing key. Replaced that DKMS driver with
+Canonical-signed `linux-modules-nvidia-595-open-7.0.0-34-generic` and matching
+NVIDIA 595.91.07 userspace packages. Updated the NVIDIA HWE module meta-package
+to `7.0.0-34.34~24.04.1+1`. No newer kernel was installed and no reboot was
+performed; Secure Boot remains enabled. NVIDIA kernel modules loaded and
+`nvidia-smi` reported the RTX 5060 Ti with 16 GiB VRAM.
+
+Restarted the existing `comfyui-tailscale` user service. The public
+`https://images.onetimesuite.com/system_stats` endpoint returned HTTP 200 and
+reported the CUDA GPU. Package-install evidence is retained on the image host
+at `/var/log/cali-gpu-driver-repair-20261003.log`. Future kernel upgrades should
+include the matching signed NVIDIA modules before booting the new kernel.
+
+An actual Krea image job invoked from the production CaliReporter container
+completed successfully at 16:58 UTC and saved
+`/uploads/20261003165808-gpu-recovery-20261003-33ca7673.webp`.
+This verifies the production-to-public-tunnel-to-GPU generation and image-store
+path, rather than only endpoint health. The GPU blocker above is resolved.
+
 - Log: `/var/log/cali-reporter-hourly-writers.log`.
 - SQLite: `hourly_writer_jobs` (author, hour, state, attempts, post, error) and `hourly_source_claims`.
 - Test: `node --test tests/hourly-jobs.test.mjs tests/section-coverage.test.mjs tests/local-news.test.mjs`.
