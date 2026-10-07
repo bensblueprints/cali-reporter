@@ -140,3 +140,28 @@ workloads, or approve and implement the separately proposed capped paid fallback
 then repeat a complete scheduled-publication verification. No paid provider is
 called by this repair. The scheduler remains enabled while the dependency is
 unresolved, with the new bounded retries and cooldowns.
+
+## Ongoing local writing validation
+
+A separate loopback-only Ollama test service was started on the existing
+inference host at port 11437, with one request/model, an 8192-token context,
+8 GiB host-memory high watermark, 12 GiB host-memory limit, no swap and nice 10.
+GLM Flash fitted in about 18,027 MiB of GPU memory, leaving about 9,820 MiB free
+at load; the existing Ollama service remained active. This establishes a viable
+local allocation for testing, not a production publishing recovery. The test
+service is a transient user unit named `cali-ollama-probe`.
+
+Unpublished generation tests found extensive source copying. A factual-note
+step and a constrained section/paragraph response produced a 795-word draft in
+about one minute, but it still contained 185 copied words and was rejected.
+The application now identifies the actual matching passages in repair feedback,
+while retaining exactly the existing eight-word-span detection and 25-word
+limit. Grouping and correction-feedback regression tests cover this change.
+The writing experiment is not yet wired into production.
+
+Imported raw templates prompted an instruction-delivery investigation. A
+stronger sentinel test showed system text does reach the model, so do not claim
+that dropped system messages caused the failures. A Cali-only model alias was
+created for testing; shared models were not overwritten. Another SSH client
+was observed sending native chat requests to the temporary endpoint; its work
+was not interrupted, and coordination was requested before any service restart.
