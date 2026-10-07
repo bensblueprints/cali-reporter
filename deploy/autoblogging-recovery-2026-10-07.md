@@ -165,3 +165,14 @@ that dropped system messages caused the failures. A Cali-only model alias was
 created for testing; shared models were not overwritten. Another SSH client
 was observed sending native chat requests to the temporary endpoint; its work
 was not interrupted, and coordination was requested before any service restart.
+
+At 13:10 UTC the exact-passage feedback update was deployed under the writer's
+existing lock, after a syntax check of the new image. It is layered over the
+recovery image as `cali-reporter:feedback-20261007`, image
+`sha256:b821ae504b0dd5e89d02cf1416fcaea38587231e4d8cc31dfcb2cf015654e226`.
+The production source and container file both match SHA-256
+`cb1e7b300b812533801aee7807042b358eeae83f3c4ecfbd9a2afb0969ed8514`.
+Pre-update source/Compose copies have `.before-feedback` suffixes in the existing
+backup directory. The source change passed all 38 repository tests. GLM still
+failed the unpublished repair canary, so its experimental alias remains outside
+the production pipeline. Stock Qwen3.5 9B is being evaluated next.
