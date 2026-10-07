@@ -74,7 +74,7 @@ async function work(job) {
    try{const source=await scrapeArticle(item.link);if(source?.text?.length>body.length)body=source.text;if(source?.ogImage)refImageUrl=source.ogImage;}catch{/* A substantial RSS summary can still support a brief. */}
    if(wordCount(body)<700)throw new Error(`Insufficient full source material: ${wordCount(body)} words`);
    tried++;
-   const rewritten=await writeReportedArticle({title:item.title,body,sourceName:feed.name,sourceUrl:item.link,category:job.category,author:{name:job.name,beat:job.beat},kind:'reported-article'});
+   const rewritten=await writeReportedArticle({title:item.title,body,sourceName:feed.name,sourceUrl:item.link,sourcePublishedAt:item.isoDate||item.pubDate,category:job.category,author:{name:job.name,beat:job.beat},kind:'reported-article'});
    body='';discardImportedText(item);
    const hero=await generateHeroImage({title:rewritten.title,deck:rewritten.deck,category:job.category,refImageUrl});
    if(!hero?.url)throw new Error('Missing article image');

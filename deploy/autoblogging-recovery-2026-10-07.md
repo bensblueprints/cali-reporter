@@ -235,3 +235,14 @@ private route from the actual application container, inspect current storage
 and runtime, test a suitable small model through every editorial gate, configure
 persistent service/wake behavior and exercise a real primary-outage failover.
 Do not enable an untested model or describe the fallback as operational.
+
+## Date context for factual review
+
+A live review confused a March photo-caption date with the publication timeline
+of an October election report. The worker now passes the RSS publication date;
+generation and review also share a fixed current timestamp for that article.
+Unknown/invalid publication dates remain null. The reviewer is explicitly told
+not to substitute a caption or historical-event date for publication metadata.
+All 46 tests pass, including timestamp normalization, consistent context between
+calls and preservation of unknown dates. This fixes missing context; it does
+not by itself establish reliable factual review or restored publishing.

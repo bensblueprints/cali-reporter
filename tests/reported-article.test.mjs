@@ -118,3 +118,21 @@ test('both unavailable providers leave the article to durable retry without mult
   (messages,tokens)=>completion(messages,tokens,async()=>{calls++;return new Response('',{status:429});})),/Inference upstreams failed/);
  assert.equal(calls,2);
 });
+
+test('generation and review share the source publication date and current context',async()=>{
+ let calls=0,asOf;
+ const output=await writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url,sourcePublishedAt:'2026-10-07T08:00:00-07:00'},async(messages,tokens)=>{
+  const data=JSON.parse(messages[1].content);
+  assert.equal(data.sourcePublishedAt,'2026-10-07T15:00:00.000Z');
+  assert(Number.isFinite(Date.parse(data.asOf)));
+  if(++calls===1)asOf=data.asOf;else{assert.equal(data.asOf,asOf);assert.match(data.dateGuidance,/photo caption/);}
+  return tokens===2500?{supported:true,issues:[]}:draft(700);
+ });
+ assert.equal(calls,2);assert(output.words>=600);
+});
+test('unknown or invalid source dates are not invented from the current clock',async()=>{
+ for(const sourcePublishedAt of [undefined,'not a date'])await writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url,sourcePublishedAt},async(messages,tokens)=>{
+  assert.equal(JSON.parse(messages[1].content).sourcePublishedAt,null);
+  return tokens===2500?{supported:true,issues:[]}:draft(700);
+ });
+});
