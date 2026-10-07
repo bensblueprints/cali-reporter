@@ -36,9 +36,9 @@ target. Do not report 24/7 successful publication from a healthy cron alone.
   600–2500-word gate, source-length requirement, attribution, copied-text and
   quotation checks, and independent factual-review call.
 
-No paid writing fallback has been enabled. Approval was requested for an
-optional DeepSeek fallback with an estimated $2/day usage cap; it is not part of
-this deployment. No unrelated model jobs were stopped or Ollama settings changed.
+No paid writing fallback has been enabled. Ben subsequently selected his Mac
+mini as the fallback; its activation requirements are below. No unrelated model
+jobs were stopped or shared Ollama settings changed.
 
 ## Relay deployment
 
@@ -135,11 +135,10 @@ throughput constraint. Inspect the timestamped writer log and run
 actual post-deployment output.
 
 The unresolved dependency is usable inference capacity. The next action is to
-allocate a dedicated local writing endpoint/model without displacing other
-workloads, or approve and implement the separately proposed capped paid fallback,
-then repeat a complete scheduled-publication verification. No paid provider is
-called by this repair. The scheduler remains enabled while the dependency is
-unresolved, with the new bounded retries and cooldowns.
+validate a dedicated local writing endpoint/model without displacing other
+workloads, then repeat a complete scheduled-publication verification. The Mac
+mini is the selected fallback. No paid provider is called by this repair. The
+scheduler remains enabled with bounded retries and cooldowns.
 
 ## Ongoing local writing validation
 
@@ -202,7 +201,7 @@ Source and container `hourly-jobs.js` both match
 The homepage returned HTTP 200 and the 13:50 scheduled run started normally.
 Backups use `.before-rotation` suffixes in the existing backup directory.
 
-## Mac mini fallback — prepared, not activated
+## Mac mini fallback — code deployed, not activated
 
 Ben selected the Mac mini as fallback only. Justin's host remains primary.
 The completion client now retries transient HTTP 429/5xx, transport, timeout or
@@ -246,3 +245,27 @@ not to substitute a caption or historical-event date for publication metadata.
 All 46 tests pass, including timestamp normalization, consistent context between
 calls and preservation of unknown dates. This fixes missing context; it does
 not by itself establish reliable factual review or restored publishing.
+
+At about 14:19 UTC the fallback client and date-context changes were deployed
+under the writer lock as `cali-reporter:fallback-ready-20261007`, image
+`sha256:7592bf08e493d0e351388e73addb9147a4a49be56b70e788902ab1fe67b006f9`.
+The three changed files match between Git, production source and container:
+
+- `lib/ai/reported-article.js`: `c2b96c24b4340070c079688038caa9fce920237e7ab560a591c9982784b42937`
+- `lib/hourly-jobs.js`: `71e919f5cf1a912ec5aae1308f493333a6cfdfd3ef16afdca4d4c1aad5c7829a`
+- `scripts/hourly-writers.js`: `61b298a3f925a7737266f01a721c077867de5ba3fd64878428806c47740ba84b`
+
+Backups have `.before-fallback-date` suffixes in the existing backup directory.
+The image layers only those files over the rotation image, preserving the
+serving frontend and unrelated live work. The homepage returned HTTP 200, and
+the 14:20 cron started automatically. Fallback base/model variables remain
+unset; no Mac failover has occurred. Source commit
+`c7a16e77d416953d72fa344f1737e12dd63de352` was pushed and remote main verified.
+
+Unpublished backend comparisons on the same stock 9B model, source, prompt and
+seed failed the copying check under both ROCm and Vulkan (1,115 and 400 matched
+words respectively). This does not establish a runtime fix. The owned Vulkan
+test service was stopped after the comparison. A separate 70B factual-review
+test accepted a 905-word stock-27B draft after 245 seconds, exceeding the live
+240-second limit. Human review still identified attribution/generalization
+concerns. Neither result is evidence of a new successful publication.
