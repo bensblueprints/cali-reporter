@@ -1,5 +1,15 @@
 # CaliReporter publishing recovery — October 7, 2026
 
+## Current status
+
+Primary scheduled publishing is restored on Justin's host using a dedicated
+Gemma4 26B service. Consecutive scheduled runs published articles 3980 and 3981
+at 15:46 and 15:55 UTC; both public pages and images were verified. The 16:00
+run also began automatically. Mac mini failover code is deployed but remains
+disabled pending Mac account access and a live private-route/model test. The
+Mac is reachable on the LAN but SSH reports a locked system/access denial.
+See the final activation section for current configuration and rollback.
+
 ## Incident
 
 At the start of this investigation the five-minute cron was active, but only one
@@ -127,14 +137,14 @@ changes, validate/reload Caddy, and remove only `cali-inference-relay`.
   already-installed Llama 3.3 model also hit the 240-second deadline at 12:03 UTC.
   A prior GLM canary did likewise. Neither alternate was selected for production.
 
-Publication recovery remains unverified until a fresh scheduled job passes
+At this earlier stage, publication recovery remained unverified until a fresh scheduled job passed
 generation, review, image handling and database insertion and its public page
 is checked. The shared model's queue and repeated rejected drafts remain the
 throughput constraint. Inspect the timestamped writer log and run
 `node scripts/audit-hourly-coverage.js --since=2026-10-07T11:50:00Z` to measure
 actual post-deployment output.
 
-The unresolved dependency is usable inference capacity. The next action is to
+The dependency at that stage was usable inference capacity. The next action was to
 validate a dedicated local writing endpoint/model without displacing other
 workloads, then repeat a complete scheduled-publication verification. The Mac
 mini is the selected fallback. No paid provider is called by this repair. The
@@ -290,7 +300,7 @@ The prior image is the fallback-ready image; two source files and Compose were
 backed up with `.before-terminated` suffixes. No model routing or fallback
 activation changed.
 
-## Candidate dedicated writer — not activated yet
+## Dedicated writer validation before activation
 
 Stock Qwen3.5 27B still copied heavily on a second source and its factual reviews
 were inconsistent. A separate local Gemma4 26B model was downloaded and tested
@@ -330,3 +340,88 @@ A deeper reasoning review exhausted the test service's 8,192-token context
 without returning final JSON: logs showed 3,235 prompt tokens, 4,957 generated
 tokens and truncation at the context boundary. A 16K-context review is being
 tested before choosing the final review settings; it is not a live provider.
+
+## Production activation and scheduled-publication verification
+
+At approximately 15:38 UTC, the coordinated activation completed under
+`/run/lock/cali-reporter-aggregate.lock`, after the previous writer exited.
+Current application image: `cali-reporter:writer-candidate-20261007`,
+`sha256:0a588aca1a97c97bdc1790221e44601d61cdd193171d71f61a5f6ce04669fbbe`.
+Despite the staging tag name, this is now the active production image. The
+reported-article.js hash matches Git, production source and container:
+`a66a0e7f741f789e8f935904aa48427486b02980016756a444409c5a452c1287`.
+
+On the inference host, `cali-ollama.service` is installed in the user's systemd
+configuration, enabled and running with restart-on-failure. User lingering is
+enabled. The owned transient probe service was stopped; shared Ollama and the
+other vision workload remained active. The service uses one request/model,
+16K context, 8 GiB memory high watermark, 12 GiB maximum and no swap. The relay
+retains the existing authenticated `/cali` route and now has:
+
+```text
+CALI_RELAY_UPSTREAM=http://127.0.0.1:11437
+CALI_RELAY_TIMEOUT_MS=360000
+```
+
+The relay's deployed hash is
+`90484b8f77398f0bf41f4e7586492a09dd068809b00898c84a1973f426598fde`; its container
+uses restart-unless-stopped. The cron explicitly sets both
+`LOCALFLEET_MODEL_SECTION=gemma4:26b` and
+`LOCALFLEET_MODEL_REVIEW=gemma4:26b`, retaining five-minute polling, concurrency
+one, the lock, the four-minute job-claim budget and the outer 20-minute timeout.
+Fast review remains selected. The optional 16K reasoning test did not finish
+before the native non-streaming client's header timeout; reasoning mode was
+not enabled in production.
+
+Verification:
+
+- All 53 code tests passed; source commit `20af4f8eb7719ed82dd3473b9afc2b0b60b1bebb`
+  was pushed and remote main verified.
+- A real authenticated request from the hosting container reached the dedicated
+  model: headers in 0.435 seconds, complete JSON in 1.396 seconds. An
+  unauthenticated request still received HTTP 401.
+- Application restart policy is unless-stopped; the dedicated model unit is
+  enabled/active and had zero restarts after the first two scheduled runs.
+  No reboot was performed on the shared inference host.
+- The 15:40 scheduled run published business post 3980 at 15:46:06 UTC, 798 words:
+  [IMF report](https://calireporter.com/article/imf-chief-warns-of-economic-divergence-and-debt-risks-amid-artificial-intelligen-3374).
+- The 15:50 scheduled run published good-news post 3981 at 15:55:47 UTC, 754 words:
+  [Historical milestones](https://calireporter.com/article/historical-milestones-from-scientific-breakthroughs-to-civil-rights-advancements-3390).
+- Both public pages returned successfully with the expected headline, canonical
+  URL and AI-assistance disclosure. Post 3980's source link and NewsArticle
+  publication timestamp were checked. Both article images, including the
+  generated image's rendered optimization route, returned HTTP 200.
+- The 16:00 poll automatically enqueued the new hour and reached a validated
+  877-word San Diego draft. This verifies recurrence; it is not a claim that
+  all 35 writer-hour targets are being met.
+
+Image handling remains degraded but did not prevent publication. Post 3980 used
+the existing Unsplash fallback after ComfyUI timed out. Post 3981 generated a
+local AI illustration, with the text checker unavailable and the illustration
+clearly identified in its caption. The scene-description request took its
+120-second fallback path. No paid writing provider was enabled.
+
+Source, Compose and cron backups use `.before-dedicated-writer` suffixes in
+`/opt/cali-autoblog-backup-20261007`. The AI host's previous relay script is
+`/home/ben/ai/cali-writer-stage-20261007/inference-heartbeat-proxy.mjs.before-dedicated-writer`.
+For rollback, acquire the writer lock, restore only the saved writer cron and
+reported-article file, select the previous transport-ready image, and restore
+the relay to the shared loopback endpoint on 11434. Preserve later unrelated
+cron/Compose changes and all newer articles. Disable only the new dedicated
+unit if it is no longer needed; never stop the shared inference or vision jobs.
+
+## Remaining Mac fallback activation dependency
+
+LAN discovery found `Benjamins-Mac-mini.local` at `192.168.110.4`. SSH debug
+confirmed that it matches the stored ED25519 host key for the historical Mac
+address. A connection reported `This system is locked`; subsequent public-key
+login attempts were denied. The model port 11435 was also unavailable on the
+LAN. Tailscale's offline status therefore did not mean the physical Mac was off.
+
+Ben was asked to unlock/sign in to the Mac account once. Blocker event
+`project-10-card-463-mac-login-locked-20261007` was accepted by SMTP at
+15:53:35 UTC; this is provider acceptance, not proof of inbox delivery. Once
+access works, inspect the current model/runtime, establish the private hosting
+connection, configure persistent operation and verify a real failover through
+all article gates. No Mac configuration or model installation was performed.
+Fallback endpoint/model variables remain unset.
