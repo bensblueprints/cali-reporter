@@ -3,6 +3,17 @@
 import http from 'node:http';
 import {pathToFileURL} from 'node:url';
 
+export function relayOptions(env=process.env){
+ const upstream=env.CALI_RELAY_UPSTREAM||'http://127.0.0.1:11434';
+ const url=new URL(upstream);
+ if(url.protocol!=='http:'||!['127.0.0.1','localhost','[::1]'].includes(url.hostname)||url.username||url.password)
+  throw new Error('CALI_RELAY_UPSTREAM must be a loopback HTTP endpoint');
+ const timeoutMs=Number(env.CALI_RELAY_TIMEOUT_MS||240000);
+ if(!Number.isSafeInteger(timeoutMs)||timeoutMs<1000||timeoutMs>600000)
+  throw new Error('CALI_RELAY_TIMEOUT_MS must be 1000–600000');
+ return {upstream,timeoutMs};
+}
+
 export function createRelay({upstream='http://127.0.0.1:11434',heartbeatMs=10000,timeoutMs=240000}={}) {
  return http.createServer((req,res)=>{
   if(req.method==='GET'&&req.url==='/health'){
@@ -55,7 +66,7 @@ export function createRelay({upstream='http://127.0.0.1:11434',heartbeatMs=10000
  });
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const server=createRelay();
+ const server=createRelay(relayOptions());
  server.listen(Number(process.env.CALI_RELAY_PORT||11436),'127.0.0.1');
  const stop=()=>server.close(()=>process.exit(0));
  process.on('SIGTERM',stop);process.on('SIGINT',stop);

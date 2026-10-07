@@ -289,3 +289,44 @@ Production source/container hashes match Git: reported-article.js
 The prior image is the fallback-ready image; two source files and Compose were
 backed up with `.before-terminated` suffixes. No model routing or fallback
 activation changed.
+
+## Candidate dedicated writer — not activated yet
+
+Stock Qwen3.5 27B still copied heavily on a second source and its factual reviews
+were inconsistent. A separate local Gemma4 26B model was downloaded and tested
+on the owned loopback endpoint. The main shared Ollama service was untouched.
+Gemma's model digest is
+`001e5dafc3c77684c2307ebc6ab8e336e10c9b18eca52acf547d72fc83c3ca8c`.
+
+Two unpublished tests using the real completion client passed all automated
+article gates: a health article (826 final words, two drafts, 143 seconds total)
+and a California report (752 final words, one draft, 77 seconds total). A control
+with a deliberately false title/deck claiming an upcoming ballot measure had
+already passed with 90% support was rejected. Spot-checking also found qualifier
+imprecision; generation/review instructions now emphasize numerical qualifiers,
+AND/OR, requests versus requirements and study subgroup counts. These tests do
+not establish error-free reporting or a successful scheduled publication.
+
+The candidate client requests strict schemas for drafts, block repairs and
+reviews, disables thinking for the fast path, caps generation output at 4,000
+tokens and permits six minutes per provider request. It targets shorter articles
+while preserving the 600–2500-word publication boundary. When copying is limited
+to at most four blocks totaling 500 words, a constrained repair replaces only
+those blocks. Response indices/tags are checked, and the complete repaired
+article must still pass quotation, copying and independent factual-review gates.
+Larger failures keep the existing complete-draft correction loop. All 53 tests
+pass, including block preservation, invalid repair rejection and mandatory
+review of repaired content.
+
+`cali-ollama.service` prepares a persistent, bounded user service on loopback
+port 11437. It is not installed or enabled yet. The relay now supports explicitly
+configured `CALI_RELAY_UPSTREAM` (loopback HTTP only) and
+`CALI_RELAY_TIMEOUT_MS` (1–600 seconds), retaining the prior defaults. Activation
+will require coordinated model/service, relay and writer configuration under
+the existing publishing lock, followed by a real scheduled article and public
+page check. The live primary route and model remain unchanged.
+
+A deeper reasoning review exhausted the test service's 8,192-token context
+without returning final JSON: logs showed 3,235 prompt tokens, 4,957 generated
+tokens and truncation at the context boundary. A 16K-context review is being
+tested before choosing the final review settings; it is not a live provider.

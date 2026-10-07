@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateArticle,validateQuotes,copiedWordCount,sourceOverlap,writeReportedArticle,plainText,wordCount,completion} from '../lib/ai/reported-article.js';
+import {validateArticle,validateQuotes,copiedWordCount,sourceOverlap,repairCopiedBlocks,writeReportedArticle,plainText,wordCount,completion} from '../lib/ai/reported-article.js';
 const url='https://example.com/story';
 const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1)}</p>`});
 test('stream reader ignores heartbeats but surfaces relay errors instead of fabricating a draft',async()=>{
@@ -28,10 +28,44 @@ test('copy repair identifies offending passages while retaining the original thr
  const result=await writeReportedArticle({body:'fact '.repeat(900)+passage,sourceUrl:url},async(messages)=>{
   calls++;
   if(calls===1)return copied;
-  if(calls===2){assert.match(messages.at(-1).content,/Rewrite these matching passages/);assert(messages.at(-1).content.includes(passage));return draft(700);}
+  if(calls===2){assert(messages.at(-1).content.includes(passage));return {replacements:[{index:0,html:'<p>New wording for the supplied factual detail.</p>'}]};}
   return {supported:true,issues:[]};
  });
  assert.equal(calls,3);assert(result.words>=600);
+});
+test('targeted copying repair preserves unaffected blocks, title and deck',async()=>{
+ const source=Array.from({length:30},(_,i)=>`sourceword${i}`).join(' ');
+ const original={title:'Keep this title',deck:'Keep this deck',html:`<h2>Keep this heading</h2><p>Keep this paragraph exactly.</p><p>${source}</p>`};
+ const result=await repairCopiedBlocks(original,source,url,async(messages,tokens)=>{
+  assert.equal(tokens,2000);
+  const blocks=JSON.parse(messages[1].content).blocks;
+  assert.equal(blocks.length,1);assert.equal(blocks[0].index,0);
+  return {replacements:[{index:0,html:'<p>Rewritten detail with different wording.</p>'}]};
+ });
+ assert.equal(result.title,original.title);assert.equal(result.deck,original.deck);
+ assert(result.html.startsWith('<h2>Keep this heading</h2><p>Keep this paragraph exactly.</p>'));
+ assert.equal(copiedWordCount(result.html,source),0);
+ assert(original.html.includes(source));
+});
+test('targeted repairs reject missing indices, extra blocks and changed structural tags',async()=>{
+ const source='one two three four five six seven eight nine ten';
+ const original={html:`<p>${source}</p>`};
+ for(const replacements of [[],[{index:1,html:'<p>Replacement.</p>'}],
+  [{index:0,html:'<p>Replacement.</p><p>Extra paragraph.</p>'}],
+  [{index:0,html:'<h2>Changed structure.</h2>'}],
+  [{index:0,html:'Outside text<p>Replacement.</p>'}]])
+  await assert.rejects(repairCopiedBlocks(original,source,url,async()=>({replacements})),/Invalid copied-block repair/);
+});
+test('targeted paraphrases still require an independent factual review',async()=>{
+ const passage=Array.from({length:30},(_,i)=>`sourceword${i}`).join(' ');
+ let reviews=0;
+ await assert.rejects(writeReportedArticle({body:'fact '.repeat(900)+passage,sourceUrl:url},async(messages,tokens)=>{
+  if(tokens===10000)return {...draft(700),html:draft(700).html+`<p>${passage}</p>`};
+  if(tokens===2000)return {replacements:[{index:0,html:'<p>An unsupported detail was added.</p>'}]};
+  reviews++;assert(JSON.parse(messages[1].content).draft.html.includes('unsupported detail'));
+  return {supported:false,issues:['Unsupported detail in the repaired paragraph']};
+ }),/Article review/);
+ assert.equal(reviews,2);
 });
 test('brief quotes must match source exactly and stay within the quotation limit',()=>{
  validateQuotes('<p>The program is called “Safer Streets”.</p>','The Safer Streets program opens today.');
@@ -81,6 +115,19 @@ function fallbackEnvironment(t) {
  t.after(()=>{for(const [k,v] of Object.entries(before)){if(v===undefined)delete process.env[k];else process.env[k]=v;}});
 }
 const streamed=value=>new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify(value)}}]})+'\n\ndata: [DONE]\n\n');
+test('repair requests constrain every requested block and review requests use a separate schema',async()=>{
+ await completion([{role:'user',content:JSON.stringify({blocks:[{index:0},{index:1}]})}],2000,async(url,init)=>{
+  const request=JSON.parse(init.body),rows=request.response_format.json_schema.schema.properties.replacements;
+  assert.equal(rows.minItems,2);assert.equal(rows.maxItems,2);
+  assert.equal(request.reasoning_effort,'none');assert.equal(request.max_tokens,2000);
+  return streamed({replacements:[]});
+ });
+ await completion([],2500,async(url,init)=>{
+  const request=JSON.parse(init.body);
+  assert.deepEqual(request.response_format.json_schema.schema.required,['supported','issues']);
+  assert.equal(request.temperature,0.1);return streamed({supported:true,issues:[]});
+ });
+});
 test('healthy primary does not call Mac fallback',async t=>{
  fallbackEnvironment(t);let calls=0;
  const result=await completion([],10000,async url=>{calls++;assert.match(url,/primary\.example/);return streamed({ok:true});});
