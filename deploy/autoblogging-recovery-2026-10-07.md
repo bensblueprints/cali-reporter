@@ -269,3 +269,23 @@ test service was stopped after the comparison. A separate 70B factual-review
 test accepted a 905-word stock-27B draft after 245 seconds, exceeding the live
 240-second limit. Human review still identified attribution/generalization
 concerns. Neither result is evidence of a new successful publication.
+
+## Interrupted inference streams
+
+A live worker received an interrupted HTTP body as `TypeError: terminated` at
+14:27 UTC. That error previously entered an editorial retry and used a long
+source cooldown. It now triggers configured provider failover or immediate
+durable retry, with the existing five-minute infrastructure cooldown. Tests
+exercise a real errored response stream and verify that partial output is
+discarded and an outage without fallback makes only one generation attempt.
+All 48 tests pass.
+
+Commit `1ff72b61e818bef09f18b423e825ca65e402e3bd` was pushed and deployed before
+the 14:35 scheduled run as `cali-reporter:transport-ready-20261007`, image
+`sha256:05532156a08a0badc79e5f956fdc4af406be85ea526a834d1e56da93e91ee016`.
+Production source/container hashes match Git: reported-article.js
+`73a3bebd92687736379984566687ffae591f055d383fc0aff2112846b4d3cc20` and hourly-jobs.js
+`562677da8dc4b6e44c7d7b3cd76ff8bd73650f6db41fb1a1ed39f6c02979baae`.
+The prior image is the fallback-ready image; two source files and Compose were
+backed up with `.before-terminated` suffixes. No model routing or fallback
+activation changed.
