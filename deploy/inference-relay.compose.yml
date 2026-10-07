@@ -1,0 +1,14 @@
+services:
+  cali-inference-relay:
+    image: node:22-alpine
+    container_name: cali-inference-relay
+    restart: unless-stopped
+    network_mode: host
+    user: node
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    command: [node, /app/inference-heartbeat-proxy.mjs]
+    volumes:
+      - ./inference-heartbeat-proxy.mjs:/app/inference-heartbeat-proxy.mjs:ro

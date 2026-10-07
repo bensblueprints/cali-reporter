@@ -1,13 +1,35 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import Database from 'better-sqlite3';
-import {HOUR,ensureHourlyJobs,enqueueHour,claimJob,retryJob,reserveSource,publishJob} from '../lib/hourly-jobs.js';
+import {HOUR,ensureHourlyJobs,enqueueHour,claimJob,retryJob,reserveSource,deferSource,publishJob} from '../lib/hourly-jobs.js';
 const now=Date.parse('2026-09-27T12:05:00Z');
 function fixture(){const db=new Database(':memory:');db.exec(`CREATE TABLE authors(id INTEGER PRIMARY KEY,name TEXT,slug TEXT,beat TEXT,voice_prompt TEXT);
  INSERT INTO authors VALUES (1,'One','one','LA',''),(2,'Two','two','SD','');
  CREATE TABLE posts(id INTEGER PRIMARY KEY,slug TEXT UNIQUE,title TEXT,deck TEXT,content_html TEXT,hero_image TEXT,hero_alt TEXT,category TEXT,origin TEXT,source_name TEXT,source_url TEXT,source_guid TEXT UNIQUE,published_at TEXT,author_id INTEGER);`);ensureHourlyJobs(db);return db;}
 const writers=[{id:1,desk:'los-angeles'},{id:2,desk:'san-diego'}];
 const post=(job)=>({slug:'article-'+job.id,title:'Article',deck:null,content_html:'<p>Reviewed article</p>',hero_image:'/uploads/image.webp',hero_alt:'Illustration',category:job.category,source_name:'Publisher',source_url:'https://example.com/'+job.id,source_guid:'source-'+job.id,published_at:new Date(now).toISOString(),author_id:job.author_id});
+test('failed sources cool down across writers and hours, then become eligible again',()=>{
+ const db=fixture();try{
+ enqueueHour(db,writers,now);const a=claimJob(db,now),b=claimJob(db,now);
+ const url='https://example.com/thin';
+ assert(reserveSource(db,a,url,now));deferSource(db,url,'Insufficient full source material: 40 words',now);
+ retryJob(db,a,'No source',now);
+ assert.equal(reserveSource(db,b,url,now+HOUR),false);
+ assert.equal(reserveSource(db,b,'https://example.com/another',now+HOUR),true);
+ assert.equal(reserveSource(db,b,url,now+6*HOUR),true);
+ }finally{db.close();}
+});
+test('transient model errors only pause a source briefly and preserve history',()=>{
+ const db=fixture();try{
+ enqueueHour(db,writers,now);const a=claimJob(db,now);
+ const url='https://example.com/retry';
+ deferSource(db,url,'Article model HTTP 524',now);
+ assert.equal(reserveSource(db,a,url,now+60000),false);
+ assert.equal(reserveSource(db,a,url,now+300000),true);
+ deferSource(db,url,'Article review: unsupported detail',now+300000);
+ assert.equal(db.prepare('SELECT failures FROM hourly_source_failures WHERE url=?').get(url).failures,2);
+ }finally{db.close();}
+});
 test('busy desks cannot consume all claims before later-ID categories get a turn',()=>{
  const db=fixture();try{
  db.exec("INSERT INTO authors VALUES (30,'City','city','Fresno','')");

@@ -8,7 +8,7 @@ import Parser from 'rss-parser';
 import {getDb} from '../lib/db.js';
 import {seedSectionWriters,CITY_WRITER_NAMES,relevantFeedItem} from '../lib/section-coverage.js';
 import {rankLocalItems,discardImportedText} from '../lib/local-news.js';
-import {ensureHourlyJobs,enqueueHour,claimJob,retryJob,reserveSource,publishJob} from '../lib/hourly-jobs.js';
+import {ensureHourlyJobs,enqueueHour,claimJob,retryJob,reserveSource,deferSource,publishJob} from '../lib/hourly-jobs.js';
 const args=new Set(process.argv.slice(2));
 const option=(name,fallback)=>process.argv.find(x=>x.startsWith(`--${name}=`))?.slice(name.length+3)||fallback;
 const dry=args.has('--dry');
@@ -28,7 +28,7 @@ if(dry) {
 }
 ensureHourlyJobs(db);
 const enqueued=enqueueHour(db,writers);
-console.log(JSON.stringify({event:'hour-enqueued',scope,enqueued,writers:writers.length}));
+console.log(JSON.stringify({at:new Date().toISOString(),event:'hour-enqueued',scope,enqueued,writers:writers.length}));
 if(args.has('--enqueue-only')){db.close();process.exit(0);}
 // Bound this worker's requests independently of the older importer configuration.
 process.env.LOCALFLEET_TEXT_TIMEOUT_MS='120000';
@@ -40,7 +40,7 @@ const feeds=JSON.parse(fs.readFileSync('feeds.json','utf8')).feeds;
 const parser=new Parser({timeout:15000,headers:{'User-Agent':'CaliReporterBot/1.0 (+https://calireporter.com)'}});
 const cache=new Map();
 const fetchFeed=url=>{if(!cache.has(url))cache.set(url,parser.parseURL(url));return cache.get(url);};
-const log=(event,extra)=>console.log(JSON.stringify({event,...extra}));
+const log=(event,extra)=>console.log(JSON.stringify({at:new Date().toISOString(),event,...extra}));
 async function candidates(job) {
  const output=[];
  for(const feed of feeds.filter(f=>f.category===job.category)) {
@@ -83,7 +83,7 @@ async function work(job) {
     hero_alt:hero.kind==='ai-illustration'?`AI-generated illustration: ${rewritten.title}. Not a photograph of the reported event.`:`Illustrative image: ${hero.alt||rewritten.title}`,
     category:job.category,source_name:feed.name,source_url:item.link,source_guid:item.guid||item.id||item.link,published_at:new Date().toISOString(),author_id:job.author_id});
    log('article-ready',{job:job.id,author:job.name,category:job.category,words:rewritten.words,...result});return;
-  }catch(error){log('candidate-rejected',{job:job.id,reason:error.message});}
+  }catch(error){deferSource(db,item.link,error.message);log('candidate-rejected',{job:job.id,reason:error.message});}
   finally{body='';discardImportedText(item);db.prepare('DELETE FROM hourly_source_claims WHERE url=? AND job_id=?').run(item.link,job.id);}
  }
  throw new Error(tried?'No candidate passed source/rewrite/image checks':'No unused eligible source available');

@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {validateArticle,validateQuotes,copiedWordCount,writeReportedArticle,plainText,wordCount} from '../lib/ai/reported-article.js';
+import {validateArticle,validateQuotes,copiedWordCount,writeReportedArticle,plainText,wordCount,completion} from '../lib/ai/reported-article.js';
 const url='https://example.com/story';
 const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1)}</p>`});
+test('stream reader ignores heartbeats but surfaces relay errors instead of fabricating a draft',async()=>{
+ const ok=': keepalive\n\ndata: '+JSON.stringify({choices:[{delta:{content:'{"ok":true}'}}]})+'\n\ndata: [DONE]\n\n';
+ assert.deepEqual(await completion([],20,async()=>new Response(ok)),{ok:true});
+ const fail=': waiting\n\ndata: {"error":{"message":"Article model HTTP 503"}}\n\n';
+ await assert.rejects(completion([],20,async()=>new Response(fail)),/HTTP 503/);
+});
 test('copied passages are detected even after quotation marks and punctuation are removed',()=>{
  const source=Array.from({length:40},(_,i)=>`word${i}`).join(' ');
  assert.equal(copiedWordCount(`<p>${source.toUpperCase()}.</p>`,source),40);
@@ -26,6 +32,11 @@ test('thin source never calls model and failed review never publishes fallback',
  let calls=0;
  await assert.rejects(writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url},async()=>++calls%2?draft(700):{supported:false,issues:['Unsupported claim']}),/review/);
  assert.equal(calls,4);
+});
+test('provider outage defers to durable backoff without three immediate generation retries',async()=>{
+ let calls=0;
+ await assert.rejects(writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url},async()=>{calls++;throw new Error('Article model HTTP 524');}),/HTTP 524/);
+ assert.equal(calls,1);
 });
 test('revision repairs short draft and final result includes safely escaped credit',async()=>{
  let calls=0;

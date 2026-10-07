@@ -12,13 +12,17 @@ This worker requires the production newsroom database schema (authors and articl
 
 `node scripts/hourly-writers.js --enqueue-only` creates this UTC hour's durable slots without calling models.
 
-`node scripts/hourly-writers.js --max-jobs=12 --budget-seconds=240 --concurrency=2` processes pending slots. Two inference jobs may run together. The budget limits starting new work; an already-started source/model/image request may finish later. Per-request text/image timeouts are 120 seconds; existing provider retries may extend total job duration.
+`node scripts/hourly-writers.js --max-jobs=12 --budget-seconds=240 --concurrency=1` processes pending slots. Production uses one writer at a time to reduce contention on the shared inference host. The budget limits starting new work; an already-started source/model/image request may finish later. Reported-article model calls have a 240-second timeout; other provider limits and editorial revisions may extend total job duration. The container-side 20-minute timeout bounds the complete run.
 
 Cron polls every five minutes under the existing aggregate flock. Each named writer gets one slot per UTC hour, 24/7. The old aggregate/column/Reddit publication cron entries are superseded by this schedule, with their exact previous configuration backed up. Other cron entries are preserved.
 
 An existing article by that author in the same hour satisfies the slot. A transactional final check prevents a second publication, enforces the writer's assigned category, and ties the inserted post to the completed job. Source URL/GUID deduplication and temporary source reservations prevent concurrent reuse of the same report.
 
 A failed job retries after five minutes, up to three attempts per hour. Each attempt tries at most two candidate reports. Running jobs renew a lease; interrupted workers can be recovered. Unfulfilled slots expire at the hour boundary rather than building an unlimited backlog. This is an hourly publication target, not a guarantee of 35 successful articles every hour. No source, failed factual review or unavailable models can leave a slot unfilled. Inspect the recorded statuses before reporting actual output.
+
+Rejected sources also have a persistent cooldown shared across writers and hours: six hours for insufficient source material, five minutes for transient inference/transport failures, and one hour for other failures. The `hourly_source_failures` table records the URL, reason, retry time and count; it does not store source bodies. Provider outages exit the editorial revision loop immediately, leaving retries to the durable queue.
+
+Production cron sets `LOCALFLEET_ARTICLE_BASE_URL=https://api.onetimesuite.com/cali`. This authenticated route sends SSE heartbeats while local inference is queued. It uses the existing API key and does not select a paid provider. See [October 7 recovery](autoblogging-recovery-2026-10-07.md) for deployment, verification and limits.
 
 ## Content
 
