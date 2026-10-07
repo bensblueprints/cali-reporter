@@ -176,3 +176,20 @@ Pre-update source/Compose copies have `.before-feedback` suffixes in the existin
 backup directory. The source change passed all 38 repository tests. GLM still
 failed the unpublished repair canary, so its experimental alias remains outside
 the production pipeline. Stock Qwen3.5 9B is being evaluated next.
+
+## Rotation across hours
+
+Slow attempts can exhaust an hour before every category is visited. The previous
+claim order reset category attempt counts each hour, then prioritized oldest
+publication, allowing the same failing desks to repeatedly start first. A
+six-hour production audit showed two attempted hours for San Francisco versus
+six for several older sections. This is uneven access to the worker, distinct
+from the model-generation failures.
+
+The claim order now uses the last hour in which each category was actually
+attempted as the tie-breaker after current-hour attempts and before publication
+age. Existing recorded job history supplies this value; no schema migration is
+needed. Writer-hour uniqueness, source reservations, leases, expiry, scope and
+publication checks remain intact. A regression test simulates an hour with
+capacity for only one failing desk and verifies that the next hour gives the
+untried section its turn. All 39 repository tests pass.

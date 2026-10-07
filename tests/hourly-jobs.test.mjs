@@ -46,6 +46,21 @@ test('new hour prioritizes the section with oldest coverage rather than writer I
  assert.equal(claimJob(db,now).category,'san-diego');
  }finally{db.close();}
 });
+test('a slow failed desk cannot starve an untried section across hour boundaries',()=>{
+ const db=fixture();try{
+ db.prepare('INSERT INTO posts(category,published_at) VALUES (?,?)').run('san-diego',new Date(now-60000).toISOString());
+ enqueueHour(db,writers,now);
+ const failed=claimJob(db,now);assert.equal(failed.category,'los-angeles');
+ retryJob(db,failed,'Model timeout',now);
+ // Capacity allowed only one attempted desk in this hour. New hourly jobs must
+ // give the other section a turn even though it has more recent coverage.
+ enqueueHour(db,writers,now+HOUR);
+ const next=claimJob(db,now+HOUR);assert.equal(next.category,'san-diego');
+ retryJob(db,next,'Model timeout',now+HOUR);
+ enqueueHour(db,writers,now+2*HOUR);
+ assert.equal(claimJob(db,now+2*HOUR).category,'los-angeles');
+ }finally{db.close();}
+});
 test('hourly slots are idempotent, scoped, and recover without duplicate publication',()=>{
  const db=fixture();try{
  assert.equal(enqueueHour(db,writers,now),2);assert.equal(enqueueHour(db,writers,now),0);
