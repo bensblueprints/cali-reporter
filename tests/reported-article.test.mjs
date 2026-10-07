@@ -106,6 +106,25 @@ test('failover discards partial primary output and uses the fallback review mode
  });
  assert.deepEqual(result,{supported:true,issues:[]});assert.equal(calls,2);
 });
+test('a terminated HTTP response switches providers and discards the interrupted draft',async t=>{
+ fallbackEnvironment(t);let calls=0;
+ const result=await completion([],10000,async()=>{
+  if(++calls>1)return streamed({fallback:true});
+  let first=true;
+  return new Response(new ReadableStream({pull(controller){
+   if(first){first=false;controller.enqueue(new TextEncoder().encode('data: {"choices":[{"delta":{"content":"{\\"partial\\":"}}]}\n\n'));}
+   else controller.error(new TypeError('terminated',{cause:{code:'UND_ERR_SOCKET'}}));
+  }}));
+ });
+ assert.deepEqual(result,{fallback:true});assert.equal(calls,2);
+});
+test('a terminated response without a fallback defers without editorial retries',async()=>{
+ let calls=0;
+ await assert.rejects(writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url},async()=>{
+  calls++;throw new TypeError('terminated',{cause:{code:'UND_ERR_SOCKET'}});
+ }),/terminated/);
+ assert.equal(calls,1);
+});
 test('authentication and malformed content errors do not trigger failover',async t=>{
  fallbackEnvironment(t);
  for(const response of [new Response('',{status:401}),new Response('data: {"choices":[{"delta":{"content":"invalid JSON"}}]}\n\n')]){
