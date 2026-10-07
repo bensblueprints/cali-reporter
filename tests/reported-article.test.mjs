@@ -71,3 +71,50 @@ test('length repair still permits a later factual correction',async()=>{
  const out=await writeReportedArticle({body:'fact '.repeat(1000),sourceUrl:url,sourceName:'Source'},async()=>responses[calls++]);
  assert.equal(calls,5);assert(out.words>=600);
 });
+
+function fallbackEnvironment(t) {
+ const vars={LOCALFLEET_ARTICLE_BASE_URL:'https://primary.example',LOCALFLEET_API_KEY:'primary-test-key',
+  LOCALFLEET_ARTICLE_FALLBACK_BASE_URL:'http://mac.example:11435',LOCALFLEET_ARTICLE_FALLBACK_MODEL:'tested-mac-model',
+  LOCALFLEET_ARTICLE_FALLBACK_API_KEY:'',LOCALFLEET_ARTICLE_FALLBACK_REVIEW_MODEL:'tested-mac-review'};
+ const before=Object.fromEntries(Object.keys(vars).map(k=>[k,process.env[k]]));
+ Object.assign(process.env,vars);
+ t.after(()=>{for(const [k,v] of Object.entries(before)){if(v===undefined)delete process.env[k];else process.env[k]=v;}});
+}
+const streamed=value=>new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify(value)}}]})+'\n\ndata: [DONE]\n\n');
+test('healthy primary does not call Mac fallback',async t=>{
+ fallbackEnvironment(t);let calls=0;
+ const result=await completion([],10000,async url=>{calls++;assert.match(url,/primary\.example/);return streamed({ok:true});});
+ assert.deepEqual(result,{ok:true});assert.equal(calls,1);
+});
+test('primary outage falls back without leaking its key and returns to primary after recovery',async t=>{
+ fallbackEnvironment(t);const calls=[];let primaryHealthy=false;
+ const request=async(url,init)=>{
+  calls.push(url);
+  if(url.includes('primary.example')){assert.equal(init.headers.Authorization,'Bearer primary-test-key');return primaryHealthy?streamed({primary:true}):new Response('',{status:503});}
+  assert.equal(init.headers.Authorization,undefined);
+  assert.equal(JSON.parse(init.body).model,'tested-mac-model');return streamed({fallback:true});
+ };
+ assert.deepEqual(await completion([],10000,request),{fallback:true});
+ primaryHealthy=true;assert.deepEqual(await completion([],10000,request),{primary:true});
+ assert.equal(calls.length,3);
+});
+test('failover discards partial primary output and uses the fallback review model',async t=>{
+ fallbackEnvironment(t);let calls=0;
+ const result=await completion([],2500,async(url,init)=>{
+  if(++calls===1)return new Response('data: {"choices":[{"delta":{"content":"{\\"unfinished\\":"}}]}\n\ndata: {"error":{"message":"Inference upstream disconnected"}}\n\n');
+  assert.equal(JSON.parse(init.body).model,'tested-mac-review');return streamed({supported:true,issues:[]});
+ });
+ assert.deepEqual(result,{supported:true,issues:[]});assert.equal(calls,2);
+});
+test('authentication and malformed content errors do not trigger failover',async t=>{
+ fallbackEnvironment(t);
+ for(const response of [new Response('',{status:401}),new Response('data: {"choices":[{"delta":{"content":"invalid JSON"}}]}\n\n')]){
+  let calls=0;await assert.rejects(completion([],10000,async()=>{calls++;return response;}));assert.equal(calls,1);
+ }
+});
+test('both unavailable providers leave the article to durable retry without multiplying calls',async t=>{
+ fallbackEnvironment(t);let calls=0;
+ await assert.rejects(writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url},
+  (messages,tokens)=>completion(messages,tokens,async()=>{calls++;return new Response('',{status:429});})),/Inference upstreams failed/);
+ assert.equal(calls,2);
+});

@@ -193,3 +193,45 @@ needed. Writer-hour uniqueness, source reservations, leases, expiry, scope and
 publication checks remain intact. A regression test simulates an hour with
 capacity for only one failing desk and verifies that the next hour gives the
 untried section its turn. All 39 repository tests pass.
+
+The rotation change was deployed under the writer lock at about 13:48 UTC as
+`cali-reporter:rotation-20261007`, image
+`sha256:bbe980bede84fa388b8b36fe09230f140995a4cd1623d1a6ff34c6214b275410`.
+Source and container `hourly-jobs.js` both match
+`8b930d405228e79fef04875e76dd53ead63eea422a8d24e12d47ab9311dc702c`.
+The homepage returned HTTP 200 and the 13:50 scheduled run started normally.
+Backups use `.before-rotation` suffixes in the existing backup directory.
+
+## Mac mini fallback — prepared, not activated
+
+Ben selected the Mac mini as fallback only. Justin's host remains primary.
+The completion client now retries transient HTTP 429/5xx, transport, timeout or
+upstream-stream failures once on a separately configured fallback. It creates
+a fresh response buffer and deadline and never forwards the primary API key.
+The next completion tries the primary again. Authentication errors and invalid
+JSON do not trigger provider switching. All returned drafts and reviews still
+pass through the same length, quotation, copying, factual-review and publication
+checks; failure of both providers returns the job to durable retry.
+
+Configuration is opt-in and currently unset:
+
+- `LOCALFLEET_ARTICLE_FALLBACK_BASE_URL`: verified private Mac inference endpoint.
+- `LOCALFLEET_ARTICLE_FALLBACK_MODEL`: model that has passed an actual Mac canary.
+- `LOCALFLEET_ARTICLE_FALLBACK_REVIEW_MODEL`: optional separate review model.
+- `LOCALFLEET_ARTICLE_FALLBACK_API_KEY`: only the fallback endpoint's credential,
+  if required. An empty value sends no Authorization header to the Mac.
+
+All 44 tests pass, including primary-only success, failover and return to primary,
+separate credentials, partial-output discard, review-model selection, excluded
+errors and bounded retry when both providers fail. These are mocked transport
+checks, not evidence that the Mac has performed a live failover.
+
+Historical inventory from September 16 identified an M4 Mac mini with 16 GiB,
+Ollama on port 11435 and `qwen3.5:4b` installed. Current October 7 access checks
+cannot reach it: the old SSH address times out, and the current Tailscale Mac
+peer is offline. The Cali hosting server's Tailscale client also reports
+`NeedsLogin`. Before activation, bring the Mac online, establish a verified
+private route from the actual application container, inspect current storage
+and runtime, test a suitable small model through every editorial gate, configure
+persistent service/wake behavior and exercise a real primary-outage failover.
+Do not enable an untested model or describe the fallback as operational.
