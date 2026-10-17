@@ -3,6 +3,25 @@ import assert from 'node:assert/strict';
 import {validateArticle,validateQuotes,copiedWordCount,sourceOverlap,repairCopiedBlocks,writeReportedArticle,plainText,wordCount,completion} from '../lib/ai/reported-article.js';
 const url='https://example.com/story';
 const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1)}</p>`});
+
+test('assigned writer voice reaches generation and corrections while factual review remains independent',async()=>{
+ let generation=0,review=0;
+ const result=await writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url,
+   author:{name:'Test Writer',beat:'Local government',voice:'Short sentences; explain budget tradeoffs.'}},async(messages,tokens)=>{
+   if(tokens===2500){review++;assert(!messages.some(m=>m.content.includes('Short sentences; explain budget tradeoffs.')));return {supported:true,issues:[]};}
+   generation++;
+   assert(messages.some(m=>m.role==='system'&&m.content.includes('Short sentences; explain budget tradeoffs.')));
+   return draft(generation===1?100:700);
+ });
+ assert.equal(generation,2);assert.equal(review,1);assert(result.words>=600);
+ assert.match(result.html,/rel="nofollow noopener noreferrer"/);
+});
+
+test('source links inside the article are nofollow and unrelated model links are removed',()=>{
+ const result=validateArticle({...draft(700),html:draft(700).html+`<p><a href="${url}" rel="follow">Reporting</a><a href="https://unverified.example/">Unverified</a></p>`},url);
+ assert.match(result.html,/rel="nofollow noopener noreferrer"/);
+ assert(!result.html.includes('https://unverified.example/'));
+});
 test('stream reader ignores heartbeats but surfaces relay errors instead of fabricating a draft',async()=>{
  const ok=': keepalive\n\ndata: '+JSON.stringify({choices:[{delta:{content:'{"ok":true}'}}]})+'\n\ndata: [DONE]\n\n';
  assert.deepEqual(await completion([],20,async()=>new Response(ok)),{ok:true});

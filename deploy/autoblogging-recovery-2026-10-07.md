@@ -2,6 +2,46 @@
 
 ## Current status
 
+### October 18 recovery in progress
+
+Production moved to Hetzner `144.76.78.158`, container `migrated-cali`, on
+October 16. Its five-minute schedule is in `/etc/cron.d/selected-migration`.
+The old dedicated primary inference service is now disabled, and the production
+audit found no new articles since October 7. Do not interpret the older recovery
+verification below as evidence of current successful publication.
+
+Mac access now works at SSH alias `mac-mini` (`100.91.15.75`). Its original
+Ollama model directory points to the absent `/Volumes/2TBSSDBEN` drive, so that
+service cannot start. `install-mac-model.py` creates a separate loopback-only
+service on port 11435 with internal storage under
+`~/Library/Application Support/CaliReporter/models`. It leaves the original
+external-drive model configuration intact. Run with `sudo python3 ... --user
+benji` for a boot-starting LaunchDaemon; without sudo it installs a LaunchAgent.
+
+`cali-mac-tunnel.service` reconnects from Hetzner to that service over SSH,
+listening only on the site's Docker bridge at `10.0.32.1:11438`. The INPUT rule
+permits only that bridge/subnet. Verify the Docker bridge identifiers before
+reusing this unit on another deployment. The Mac host key was checked against
+its local SSH public-key fingerprint before establishing the tunnel.
+
+The proposed release wires each existing author's `voice_prompt` into article
+generation and keeps factual review independent of the persona. Every retained
+source link receives `nofollow noopener noreferrer`. `deploy/feed-writer-map.json`
+records one verified primary feed for each of 13 categories and all 35 writers;
+23 working feeds including secondaries are retained. Eight failing feeds and a
+stale AP feed are excluded; the previous production configuration is preserved
+in `deploy/feeds.production-20261018.json`.
+
+All 55 tests pass. The 4B model failed the real quotation canary and has not been
+enabled for publication. Qwen3.5 9B is undergoing an unpublished full-client
+canary. The candidate image `selected-migration/cali:20261018-mac` layers the
+two worker changes over the actual production image, preserving the newer live
+frontend. It is not yet activated. Backups and probe evidence reside in
+`/opt/cali-recovery-20261018` on Hetzner. Use `replace-cali-container.py` under the
+existing writer flock only after model verification; it preserves mounts,
+environment, ports and network settings and restores the old container if the
+homepage health check fails. Public article publication remains unverified.
+
 Primary scheduled publishing is restored on Justin's host using a dedicated
 Gemma4 26B service. Consecutive scheduled runs published articles 3980 and 3981
 at 15:46 and 15:55 UTC; both public pages and images were verified. The 16:00

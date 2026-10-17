@@ -1,0 +1,6 @@
+# Layer only the reviewed worker changes over the exact deployed application.
+# Production contains frontend/source changes absent from the public scaffold.
+ARG BASE_IMAGE=selected-migration/cali:20261016
+FROM ${BASE_IMAGE}
+COPY reported-article.js /app/lib/ai/reported-article.js
+COPY hourly-writers.js /app/scripts/hourly-writers.js

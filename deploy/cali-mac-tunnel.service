@@ -1,0 +1,14 @@
+[Unit]
+Description=Private CaliReporter connection to Mac mini inference
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/sh -c '/usr/sbin/iptables -C INPUT -i br-3cde67b0650b -s 10.0.32.0/24 -d 10.0.32.1 -p tcp --dport 11438 -m comment --comment cali-mac-inference -j ACCEPT || /usr/sbin/iptables -I INPUT 1 -i br-3cde67b0650b -s 10.0.32.0/24 -d 10.0.32.1 -p tcp --dport 11438 -m comment --comment cali-mac-inference -j ACCEPT'
+ExecStart=/usr/bin/ssh -NT -o BatchMode=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o ConnectTimeout=10 -L 10.0.32.1:11438:127.0.0.1:11435 benji@100.91.15.75
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
