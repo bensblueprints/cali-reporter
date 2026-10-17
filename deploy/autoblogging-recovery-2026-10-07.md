@@ -12,11 +12,20 @@ verification below as evidence of current successful publication.
 
 Mac access now works at SSH alias `mac-mini` (`100.91.15.75`). Its original
 Ollama model directory points to the absent `/Volumes/2TBSSDBEN` drive, so that
-service cannot start. `install-mac-model.py` creates a separate loopback-only
-service on port 11435 with internal storage under
-`~/Library/Application Support/CaliReporter/models`. It leaves the original
-external-drive model configuration intact. Run with `sudo python3 ... --user
-benji` for a boot-starting LaunchDaemon; without sudo it installs a LaunchAgent.
+service cannot start. Ben subsequently requested replacing Ollama entirely for
+this project. The temporary Cali-specific Ollama service was stopped, and only
+its newly downloaded test models were removed. The original external-drive
+configuration was left intact.
+
+The new runtime is native MLX in `~/cali-writer/.venv`, with pinned packages in
+`deploy/mlx-requirements.txt` and a pinned model revision in
+`deploy/mlx-model-manifest.json`. The model snapshot lives at
+`~/cali-writer/model`. `sudo python3 install-mac-mlx.py --user benji` installs a
+boot-starting LaunchDaemon named `com.calireporter.mlx`. It runs inference as
+`benji`, offline, listening only on `127.0.0.1:11435`. Prompt-cache limits and
+single-request concurrency bound memory usage. Log files are under
+`~/cali-writer/logs`. The application uses model ID `default_model` for this
+MLX server, whose selected local model is fixed by the service configuration.
 
 `cali-mac-tunnel.service` reconnects from Hetzner to that service over SSH,
 listening only on the site's Docker bridge at `10.0.32.1:11438`. The INPUT rule
@@ -32,9 +41,12 @@ records one verified primary feed for each of 13 categories and all 35 writers;
 stale AP feed are excluded; the previous production configuration is preserved
 in `deploy/feeds.production-20261018.json`.
 
-All 55 tests pass. The 4B model failed the real quotation canary and has not been
-enabled for publication. Qwen3.5 9B is undergoing an unpublished full-client
-canary. The candidate image `selected-migration/cali:20261018-mac` layers the
+All 55 tests passed; the 25 article tests also pass after combining persona
+instructions into one system message for native model-template compatibility.
+The Ollama Qwen3.5 4B canary failed quotation validation; 9B repeatedly failed
+source-overlap validation and was stopped at Ben's runtime-switch request.
+Neither was enabled for publication. MLX/Gemma validation is pending.
+The candidate image `selected-migration/cali:20261018-mac` layers the
 two worker changes over the actual production image, preserving the newer live
 frontend. It is not yet activated. Backups and probe evidence reside in
 `/opt/cali-recovery-20261018` on Hetzner. Use `replace-cali-container.py` under the

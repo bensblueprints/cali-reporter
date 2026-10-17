@@ -1,0 +1,6 @@
+{
+  "repo": "mlx-community/gemma-4-e4b-it-4bit",
+  "revision": "475b9088d29754a3379866cf5aeb6b41acd313c2",
+  "runtime": "mlx-lm",
+  "runtime_version": "0.32.2"
+}
