@@ -102,19 +102,16 @@ checks intact. Do not pad or invent text to meet length.
 
 ## Resume sequence
 
-1. Check whether the final Qwen reviewer-control process has finished. Inspect
-   its result in the previous terminal session; do not infer success from a
-   running process.
-2. Run Node and endpoint tests because code changed after the last passing run.
-3. Run the full unpublished article canary with Qwen on a substantial English
+1. Run Node and endpoint tests because code changed after the last passing run.
+2. Run the full unpublished article canary with Qwen on a substantial English
    source. Manually compare every number, qualifier, attribution and claim with
    the source. Reject padded, repetitive, incomplete or unsupported output.
-4. Repeat on more than one category and writer, then activate under the existing
+3. Repeat on more than one category and writer, then activate under the existing
    flock with the prepared backup and rollback procedure. Verify the public
    homepage, a published article's source `nofollow` link, correct byline and
    complete body, and subsequent scheduled runs before reporting the system as
    restored.
-5. Facebook sharing has not started. Before that step, identify the publisher's
+4. Facebook sharing has not started. Before that step, identify the publisher's
    authorized accounts, the specific groups, group rules, and disclose the
    publisher/AI context. No messages or posts have been sent.
 
