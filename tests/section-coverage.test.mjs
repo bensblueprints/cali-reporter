@@ -6,6 +6,20 @@ import {join} from 'node:path';
 import {execFileSync} from 'node:child_process';
 import Database from 'better-sqlite3';
 import {orderFeeds,relevantFeedItem,SECTION_DESKS} from '../lib/section-coverage.js';
+
+test('city writers receive distinct voices and reseeding preserves an editor customisation',async()=>{
+ const {seedSectionWriters}=await import('../lib/section-coverage.js');
+ const db=new Database(':memory:');
+ try {
+  db.exec('CREATE TABLE authors (id INTEGER PRIMARY KEY,slug TEXT UNIQUE,name TEXT,role TEXT,desk TEXT,beat TEXT,bio TEXT,voice_prompt TEXT)');
+  seedSectionWriters(db);
+  const voices=db.prepare("SELECT voice_prompt FROM authors WHERE desk IN ('los-angeles','san-diego','san-jose','san-francisco','fresno')").all();
+  assert.equal(new Set(voices.map(v=>v.voice_prompt)).size,5);
+  db.prepare("UPDATE authors SET voice_prompt=? WHERE desk='fresno'").run('An editor-defined voice.');
+  seedSectionWriters(db);
+  assert.equal(db.prepare("SELECT voice_prompt FROM authors WHERE desk='fresno'").get().voice_prompt,'An editor-defined voice.');
+ }finally{db.close();}
+});
 test('rotation reaches every section even when one section has many feeds',()=>{
  const feeds=[{category:'busy',name:'b1'},{category:'busy',name:'b2'},...SECTION_DESKS.map(d=>({category:d.category,name:d.category}))];
  const coverage=[{category:'busy',latest:'2026-09-26T00:00:00Z'}];
@@ -19,6 +33,7 @@ test('rotation reaches every section even when one section has many feeds',()=>{
  assert.equal(orderFeeds(feeds,[]).at(-1).name,'b2');
 });
 test('regional and relationship feeds exclude unrelated, stale and future entries',()=>{
+ assert.equal(relevantFeedItem({exclude:'/calmatters-en-espanol/'},{link:'https://calmatters.org/calmatters-en-espanol/story'}),false);
  const feed={match:'San Jos[eé]'};const now=Date.parse('2026-09-27T00:00:00Z');
  assert.equal(relevantFeedItem(feed,{title:'San José housing',isoDate:'2026-09-26'},now),true);
  assert.equal(relevantFeedItem(feed,{title:'Santa Clara election'},now),false);

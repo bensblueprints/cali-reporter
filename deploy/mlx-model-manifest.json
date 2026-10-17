@@ -1,6 +1,7 @@
 {
-  "repo": "mlx-community/gemma-4-e4b-it-4bit",
-  "revision": "475b9088d29754a3379866cf5aeb6b41acd313c2",
+  "repo": "mlx-community/Qwen3.5-9B-4bit",
+  "revision": "8b2b98c00a6b4d291155e4890773ca8f769aee53",
+  "directory": "qwen-model",
   "runtime": "mlx-lm",
   "runtime_version": "0.32.2"
 }

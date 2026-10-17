@@ -4,3 +4,5 @@ ARG BASE_IMAGE=selected-migration/cali:20261016
 FROM ${BASE_IMAGE}
 COPY reported-article.js /app/lib/ai/reported-article.js
 COPY hourly-writers.js /app/scripts/hourly-writers.js
+COPY section-coverage.js /app/lib/section-coverage.js
+COPY backup-database.mjs /app/scripts/backup-database.mjs

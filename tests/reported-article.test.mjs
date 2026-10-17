@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {validateArticle,validateQuotes,copiedWordCount,sourceOverlap,repairCopiedBlocks,writeReportedArticle,plainText,wordCount,completion} from '../lib/ai/reported-article.js';
 const url='https://example.com/story';
-const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1)}</p>`});
+const draft=n=>({title:'A sourced title',deck:'A factual deck',html:`<h2>Details</h2><p>${'evidence '.repeat(n-1).trimEnd()}.</p>`});
 
 test('assigned writer voice reaches generation and corrections while factual review remains independent',async()=>{
  let generation=0,review=0;
@@ -11,16 +11,32 @@ test('assigned writer voice reaches generation and corrections while factual rev
    if(tokens===2500){review++;assert(!messages.some(m=>m.content.includes('Short sentences; explain budget tradeoffs.')));return {supported:true,issues:[]};}
    generation++;
    assert(messages.some(m=>m.role==='system'&&m.content.includes('Short sentences; explain budget tradeoffs.')));
+   assert(!messages.some(m=>m.content.includes('Test Writer')));
    return draft(generation===1?100:700);
  });
  assert.equal(generation,2);assert.equal(review,1);assert(result.words>=600);
  assert.match(result.html,/rel="nofollow noopener noreferrer"/);
 });
 
+test('two formatting repairs still leave one chance to correct a factual error',async()=>{
+ let generations=0,reviews=0;
+ const result=await writeReportedArticle({body:'fact '.repeat(900),sourceUrl:url},async(messages,tokens)=>{
+  if(tokens===2500){reviews++;return reviews===1?{supported:false,issues:['Incorrect attribution']}:{supported:true,issues:[]};}
+  generations++;return draft(generations<3?100:700);
+ });
+ assert.equal(generations,4);assert.equal(reviews,2);assert(result.words>=600);
+});
+
 test('source links inside the article are nofollow and unrelated model links are removed',()=>{
- const result=validateArticle({...draft(700),html:draft(700).html+`<p><a href="${url}" rel="follow">Reporting</a><a href="https://unverified.example/">Unverified</a></p>`},url);
+ const result=validateArticle({...draft(700),html:draft(700).html+`<p><a href="${url}" rel="follow">Reporting</a><a href="https://unverified.example/">Unverified</a>.</p>`},url);
  assert.match(result.html,/rel="nofollow noopener noreferrer"/);
  assert(!result.html.includes('https://unverified.example/'));
+});
+
+test('a long draft cut off mid-sentence cannot pass as a finished article',()=>{
+ for(const ending of ['and','and.','incomplete clause'])
+  assert.throws(()=>validateArticle({...draft(700),html:draft(700).html+`<p>The report covers addresses, party affiliation, ${ending}</p>`},url),/unfinished paragraph/);
+ assert.doesNotThrow(()=>validateArticle({...draft(700),html:draft(700).html+'<p>The report covers addresses and party affiliation.</p>'},url));
 });
 test('stream reader ignores heartbeats but surfaces relay errors instead of fabricating a draft',async()=>{
  const ok=': keepalive\n\ndata: '+JSON.stringify({choices:[{delta:{content:'{"ok":true}'}}]})+'\n\ndata: [DONE]\n\n';
@@ -42,7 +58,7 @@ test('overlap feedback groups matching windows without double-counting words',()
 });
 test('copy repair identifies offending passages while retaining the original threshold',async()=>{
  const passage=Array.from({length:30},(_,i)=>`sourceword${i}`).join(' ');
- const copied={...draft(700),html:draft(700).html+`<p>${passage}</p>`};
+ const copied={...draft(700),html:draft(700).html+`<p>${passage}.</p>`};
  let calls=0;
  const result=await writeReportedArticle({body:'fact '.repeat(900)+passage,sourceUrl:url},async(messages)=>{
   calls++;
@@ -79,7 +95,7 @@ test('targeted paraphrases still require an independent factual review',async()=
  const passage=Array.from({length:30},(_,i)=>`sourceword${i}`).join(' ');
  let reviews=0;
  await assert.rejects(writeReportedArticle({body:'fact '.repeat(900)+passage,sourceUrl:url},async(messages,tokens)=>{
-  if(tokens===10000)return {...draft(700),html:draft(700).html+`<p>${passage}</p>`};
+  if(tokens===10000)return {...draft(700),html:draft(700).html+`<p>${passage}.</p>`};
   if(tokens===2000)return {replacements:[{index:0,html:'<p>An unsupported detail was added.</p>'}]};
   reviews++;assert(JSON.parse(messages[1].content).draft.html.includes('unsupported detail'));
   return {supported:false,issues:['Unsupported detail in the repaired paragraph']};
@@ -134,6 +150,16 @@ function fallbackEnvironment(t) {
  t.after(()=>{for(const [k,v] of Object.entries(before)){if(v===undefined)delete process.env[k];else process.env[k]=v;}});
 }
 const streamed=value=>new Response('data: '+JSON.stringify({choices:[{delta:{content:JSON.stringify(value)}}]})+'\n\ndata: [DONE]\n\n');
+
+test('structured section text is rendered safely instead of accepting model markup',async()=>{
+ const result=await completion([],10000,async(url,init)=>{
+  const schema=JSON.parse(init.body).response_format.json_schema.schema;
+  assert.equal(schema.properties.sections.minItems,4);
+  return streamed({title:'Title',deck:'Deck',intro:'A complete introduction.',sections:[{heading:'Facts <script>',paragraphs:['A <script>alert(1)</script> claim.','Another complete paragraph.']}]});
+ });
+ assert.match(result.html,/<h2>Facts &lt;script&gt;<\/h2>/);
+ assert(!result.html.includes('<script>'));
+});
 test('repair requests constrain every requested block and review requests use a separate schema',async()=>{
  await completion([{role:'user',content:JSON.stringify({blocks:[{index:0},{index:1}]})}],2000,async(url,init)=>{
   const request=JSON.parse(init.body),rows=request.response_format.json_schema.schema.properties.replacements;
@@ -143,7 +169,7 @@ test('repair requests constrain every requested block and review requests use a 
  });
  await completion([],2500,async(url,init)=>{
   const request=JSON.parse(init.body);
-  assert.deepEqual(request.response_format.json_schema.schema.required,['supported','issues']);
+  assert.deepEqual(request.response_format.json_schema.schema.required,['checks','issues','supported']);
   assert.equal(request.temperature,0.1);return streamed({supported:true,issues:[]});
  });
 });

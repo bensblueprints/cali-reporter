@@ -16,7 +16,8 @@
       "name": "CalMatters",
       "url": "https://calmatters.org/feed/",
       "category": "california",
-      "weight": 1
+      "weight": 1,
+      "exclude": "/calmatters-en-espanol/|/newsletter/"
     },
     {
       "name": "LA Times: California",
@@ -64,8 +65,8 @@
       "match": "Los Angeles|Sherman Oaks|Hollywood|San Fernando|Van Nuys|LA County"
     },
     {
-      "name": "NPR: Top Stories",
-      "url": "https://feeds.npr.org/1001/rss.xml",
+      "name": "NPR: National",
+      "url": "https://feeds.npr.org/1003/rss.xml",
       "category": "national",
       "weight": 1
     },
@@ -135,7 +136,7 @@
       "url": "https://sanjosespotlight.com/feed/",
       "category": "san-jose",
       "weight": 1,
-      "match": "San Jos[e\u00c3\u00a9]"
+      "match": "San Jos[e\u00c3\u0192\u00c2\u00a9]"
     },
     {
       "name": "OPB: West Coast",

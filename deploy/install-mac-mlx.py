@@ -10,17 +10,20 @@ import pathlib
 import plistlib
 import pwd
 import subprocess
+import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--user', required=True)
+parser.add_argument('--model', type=pathlib.Path, help='Installed model snapshot; defaults to ~/cali-writer/model')
 args = parser.parse_args()
 if os.geteuid() != 0:
     raise SystemExit('Install using sudo; model inference itself runs as the selected user.')
 account = pwd.getpwnam(args.user)
 home = pathlib.Path(account.pw_dir)
 root = home / 'cali-writer'
-server = root / '.venv/bin/mlx_lm.server'
-if not server.is_file() or not (root / 'model/config.json').is_file():
+server = root / 'mlx-writer-server.py'
+model = (args.model or root / 'model').resolve()
+if not server.is_file() or not (model / 'config.json').is_file():
     raise SystemExit('Install the Python environment and model snapshot first.')
 label = 'com.calireporter.mlx'
 target = pathlib.Path('/Library/LaunchDaemons') / (label + '.plist')
@@ -31,13 +34,8 @@ config = {
     'Label': label,
     'UserName': account.pw_name,
     'WorkingDirectory': str(root),
-    'ProgramArguments': [str(server), '--model', str(root / 'model'),
-        '--host', '127.0.0.1', '--port', '11435',
-        '--max-tokens', '4000', '--prompt-cache-size', '2',
-        '--prompt-cache-bytes', '536870912', '--prefill-step-size', '512',
-        '--decode-concurrency', '1', '--prompt-concurrency', '1',
-        '--chat-template-args', '{"enable_thinking":false}',
-        '--log-level', 'INFO'],
+    'ProgramArguments': [str(root / '.venv/bin/python'),str(server),
+        '--model', str(model), '--port', '11435', '--logs',str(logs)],
     'EnvironmentVariables': {'HOME':str(home), 'PYTHONUNBUFFERED':'1',
         'HF_HUB_OFFLINE':'1', 'TOKENIZERS_PARALLELISM':'false'},
     'RunAtLoad': True,
@@ -50,5 +48,9 @@ if target.exists():target.with_suffix('.plist.previous').write_bytes(target.read
 target.write_bytes(plistlib.dumps(config))
 target.chmod(0o644)
 subprocess.run(['launchctl', 'bootout', 'system/' + label], capture_output=True)
+for _ in range(40):
+    if subprocess.run(['launchctl','print','system/'+label],capture_output=True).returncode:
+        break
+    time.sleep(0.25)
 subprocess.run(['launchctl', 'bootstrap', 'system', str(target)], check=True)
 print('Installed com.calireporter.mlx on loopback port 11435, running as ' + account.pw_name)

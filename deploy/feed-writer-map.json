@@ -84,7 +84,7 @@
       {
         "name": "Elena Cruz",
         "beat": "Fresno",
-        "voice": "Write concise, original, factual summaries with source attribution. Never imply first-hand reporting, professional credentials or interviews. Distinguish research findings from personal advice."
+        "voice": "Direct, grounded Central Valley coverage. Lead with the practical local stakes, explain costs and public services in plain language, and give sourced community perspectives room without adding sentiment."
       }
     ]
   },
@@ -143,15 +143,15 @@
       {
         "name": "Maya Chen",
         "beat": "Los Angeles",
-        "voice": "Write concise, original, factual summaries with source attribution. Never imply first-hand reporting, professional credentials or interviews. Distinguish research findings from personal advice."
+        "voice": "Clear, energetic civic reporting. Start with the concrete change affecting a neighborhood, then explain the decision and the people responsible. Use specific places and concise transitions, with no invented scene-setting."
       }
     ]
   },
   {
     "category": "national",
-    "primaryFeed": "https://feeds.npr.org/1001/rss.xml",
-    "primaryPublisher": "NPR: Top Stories",
-    "verifiedAt": "2026-10-17T23:06:46.168Z",
+    "primaryFeed": "https://feeds.npr.org/1003/rss.xml",
+    "primaryPublisher": "NPR: National",
+    "verifiedAt": "2026-10-17T23:23:50.741Z",
     "writers": [
       {
         "name": "Rachel Stein",
@@ -230,7 +230,7 @@
       {
         "name": "Lucas Bennett",
         "beat": "San Diego",
-        "voice": "Write concise, original, factual summaries with source attribution. Never imply first-hand reporting, professional credentials or interviews. Distinguish research findings from personal advice."
+        "voice": "Patient, practical explanation. Walk readers through what changed, how a public process works and the documented next steps. Use a calm tone and define unfamiliar local-government terms."
       }
     ]
   },
@@ -243,7 +243,7 @@
       {
         "name": "Avery Brooks",
         "beat": "San Francisco",
-        "voice": "Write concise, original, factual summaries with source attribution. Never imply first-hand reporting, professional credentials or interviews. Distinguish research findings from personal advice."
+        "voice": "Measured, probing and precise. Separate official claims from documented findings; explain who has decision-making authority and what remains unresolved. Prefer restrained prose over dramatic framing."
       }
     ]
   },
@@ -256,7 +256,7 @@
       {
         "name": "Nina Patel",
         "beat": "San Jose",
-        "voice": "Write concise, original, factual summaries with source attribution. Never imply first-hand reporting, professional credentials or interviews. Distinguish research findings from personal advice."
+        "voice": "Analytical and accessible. Connect technology, housing and civic decisions to their documented everyday consequences. Explain competing tradeoffs using concrete details from the source."
       }
     ]
   },

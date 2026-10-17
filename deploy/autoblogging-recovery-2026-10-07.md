@@ -2,6 +2,8 @@
 
 ## Current status
 
+See the concise, current operator handoff in [`HANDOFF.md`](../HANDOFF.md).
+
 ### October 18 recovery in progress
 
 Production moved to Hetzner `144.76.78.158`, container `migrated-cali`, on
@@ -20,10 +22,13 @@ configuration was left intact.
 The new runtime is native MLX in `~/cali-writer/.venv`, with pinned packages in
 `deploy/mlx-requirements.txt` and a pinned model revision in
 `deploy/mlx-model-manifest.json`. The model snapshot lives at
-`~/cali-writer/model`. `sudo python3 install-mac-mlx.py --user benji` installs a
+`~/cali-writer/qwen-model`. `sudo python3 install-mac-mlx.py --user benji --model /Users/benji/cali-writer/qwen-model` installs a
 boot-starting LaunchDaemon named `com.calireporter.mlx`. It runs inference as
-`benji`, offline, listening only on `127.0.0.1:11435`. Prompt-cache limits and
-single-request concurrency bound memory usage. Log files are under
+`benji`, offline, listening only on `127.0.0.1:11435`. The custom
+`mlx-writer-server.py` uses Outlines to enforce JSON schemas during generation.
+It permits only the fixed model, one request at a time, a 12,000-token prompt,
+4,000 output tokens, a 10 GiB memory limit and a 340-second generation deadline.
+A watchdog exits a stuck process so launchd can restart it. Log files are under
 `~/cali-writer/logs`. The application uses model ID `default_model` for this
 MLX server, whose selected local model is fixed by the service configuration.
 
@@ -41,18 +46,30 @@ records one verified primary feed for each of 13 categories and all 35 writers;
 stale AP feed are excluded; the previous production configuration is preserved
 in `deploy/feeds.production-20261018.json`.
 
-All 55 tests passed; the 25 article tests also pass after combining persona
-instructions into one system message for native model-template compatibility.
+All 59 Node tests and six endpoint tests passed before the latest canary tuning.
+The endpoint tests cover schema failure, truncated output, request limits and
+single-request concurrency. Real model quality is tested separately.
 The Ollama Qwen3.5 4B canary failed quotation validation; 9B repeatedly failed
 source-overlap validation and was stopped at Ben's runtime-switch request.
-Neither was enabled for publication. MLX/Gemma validation is pending.
+Neither was enabled for publication. MLX/Gemma E4B was rejected after manual
+review found unsupported claims that its own factual review missed. An early
+639-word draft passed automated review but manual inspection found an unfinished
+paragraph; it was rejected without publishing. The writer now rejects unfinished
+paragraphs and renders structured plain-text sections safely. English-source
+canaries still need to pass length, copying and factual checks plus manual review.
+The active test model is now native MLX Qwen3.5 9B, separate from the discarded
+Ollama test. The service recovered automatically after a deliberate SIGTERM.
+Controls now exercise the actual production review prompt, including unsupported
+comparisons (which the smaller Gemma model incorrectly accepted).
 The candidate image `selected-migration/cali:20261018-mac` layers the
-two worker changes over the actual production image, preserving the newer live
+worker files over the actual production image, preserving the newer live
 frontend. It is not yet activated. Backups and probe evidence reside in
 `/opt/cali-recovery-20261018` on Hetzner. Use `replace-cali-container.py` under the
 existing writer flock only after model verification; it preserves mounts,
 environment, ports and network settings and restores the old container if the
 homepage health check fails. Public article publication remains unverified.
+
+### Historical October 7 status (superseded by the October 18 investigation)
 
 Primary scheduled publishing is restored on Justin's host using a dedicated
 Gemma4 26B service. Consecutive scheduled runs published articles 3980 and 3981
